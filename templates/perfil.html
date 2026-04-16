@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>RESERMAX | Athlete Profile</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;900&family=Manrope:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link rel="stylesheet" href="/static/css/index.css">
+    <style>
+        .stat-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); transition: all .3s; }
+        .stat-card:hover { background: rgba(255,255,255,0.05); border-color: rgba(247,187,7,0.3); }
+    </style>
+</head>
+<body class="bg-[#0a0a0a] text-[#e5e2e1] font-['Manrope'] min-h-screen" style="background:radial-gradient(circle at top right,rgba(247,187,7,.08),transparent 40%),radial-gradient(circle at bottom left,rgba(165,211,150,.05),transparent 40%) #0a0a0a;">
+
+    <header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-6 py-4 bg-[#131313]/80 backdrop-blur-md border-b border-white/5">
+        <div class="flex items-center gap-8">
+            <span class="text-2xl font-black tracking-tighter text-[#e5e2e1] font-['Space_Grotesk'] uppercase">RESERMAX</span>
+            <nav class="hidden md:flex items-center gap-6">
+                <a class="text-[#d3c5ac] hover:text-[#f7bb07] transition-colors font-['Space_Grotesk'] text-sm uppercase tracking-widest py-1" href="/">Explore</a>
+                <a class="text-[#f7bb07] font-bold border-b-2 border-[#f7bb07] font-['Space_Grotesk'] text-sm uppercase tracking-widest py-1" href="/perfil">Profile</a>
+                <a class="text-[#d3c5ac] hover:text-[#ffdc94] transition-colors font-['Space_Grotesk'] text-sm uppercase tracking-widest py-1" href="/premios">Rewards</a>
+            </nav>
+        </div>
+        <div class="flex items-center gap-4">
+            <a href="/logout" class="bg-[#f7bb07] text-black px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-widest">Sign Out</a>
+        </div>
+    </header>
+
+    <main class="pt-32 px-6 lg:px-24 pb-24">
+        <div class="max-w-7xl mx-auto">
+            <!-- Profile Header Bento -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-12">
+                <!-- User Info -->
+                <div class="lg:col-span-8 bg-[#131313] rounded-2xl p-8 border border-white/5 flex flex-col md:flex-row gap-8 items-center md:items-start">
+                    <div class="relative">
+                        <div class="h-24 w-24 rounded-2xl bg-[#f7bb07] flex items-center justify-center border-2 border-[#f7bb07]/30">
+                            <span id="user-avatar-letter" class="font-['Space_Grotesk'] text-4xl font-black text-black">?</span>
+                        </div>
+                    </div>
+                    <div class="flex-1 text-center md:text-left">
+                        <div class="flex flex-col md:flex-row md:items-center gap-4 mb-4">
+                            <h1 id="user-name" class="font-['Space_Grotesk'] text-3xl font-black tracking-tighter uppercase">Loading...</h1>
+                            <span class="bg-[#f7bb07]/10 text-[#f7bb07] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-[#f7bb07]/20 self-center md:self-auto">Elite Tier</span>
+                        </div>
+                        <div class="flex flex-wrap justify-center md:justify-start gap-4">
+                            <div class="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-lg border border-white/5">
+                                <span class="material-symbols-outlined text-[#f7bb07] text-sm">mail</span>
+                                <span id="user-email" class="text-xs font-medium">—</span>
+                            </div>
+                            <div class="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-lg border border-white/5">
+                                <span class="material-symbols-outlined text-[#f7bb07] text-sm">calendar_today</span>
+                                <span id="user-since" class="text-xs font-medium">—</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Points Card -->
+                <div class="lg:col-span-4 bg-[#f7bb07] rounded-2xl p-8 flex flex-col justify-between relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform duration-700">
+                        <span class="material-symbols-outlined text-9xl text-black">stars</span>
+                    </div>
+                    <div class="relative z-10">
+                        <span class="text-black/60 text-[10px] font-black uppercase tracking-[0.2em] mb-2 block">Available Balance</span>
+                        <div class="flex items-baseline gap-2">
+                            <span id="user-points" class="text-black font-['Space_Grotesk'] text-5xl font-black tracking-tighter">—</span>
+                            <span class="text-black font-bold text-sm uppercase tracking-widest">PTS</span>
+                        </div>
+                    </div>
+                    <div class="relative z-10">
+                        <div class="w-full bg-black/10 h-1.5 rounded-full mb-4">
+                            <div id="points-bar" class="bg-black h-full rounded-full transition-all duration-1000" style="width:0%"></div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-black/60 text-[10px] font-bold uppercase tracking-widest">Next: 5,000 PTS</span>
+                            <a href="/premios" class="text-black font-black text-[10px] uppercase tracking-widest border-b-2 border-black">Redeem</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats & Reservations Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Quick Stats -->
+                <div class="space-y-6">
+                    <div class="bg-[#131313] rounded-2xl p-6 border border-white/5">
+                        <h3 class="font-['Space_Grotesk'] text-sm font-black uppercase tracking-widest mb-6 text-[#f7bb07]">Performance Metrics</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="stat-card p-4 rounded-xl">
+                                <span class="block text-[10px] text-[#d3c5ac] uppercase tracking-widest mb-1">Total Bookings</span>
+                                <span id="stat-total" class="text-2xl font-black">—</span>
+                            </div>
+                            <div class="stat-card p-4 rounded-xl">
+                                <span class="block text-[10px] text-[#d3c5ac] uppercase tracking-widest mb-1">Confirmed</span>
+                                <span id="stat-confirmed" class="text-2xl font-black">—</span>
+                            </div>
+                            <div class="stat-card p-4 rounded-xl">
+                                <span class="block text-[10px] text-[#d3c5ac] uppercase tracking-widest mb-1">Cancelled</span>
+                                <span id="stat-cancelled" class="text-2xl font-black">—</span>
+                            </div>
+                            <div class="stat-card p-4 rounded-xl">
+                                <span class="block text-[10px] text-[#d3c5ac] uppercase tracking-widest mb-1">Pts Earned</span>
+                                <span id="stat-pts" class="text-2xl font-black">—</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Reservations -->
+                <div class="lg:col-span-2 bg-[#131313] rounded-2xl p-8 border border-white/5">
+                    <div class="flex justify-between items-center mb-8">
+                        <h3 class="font-['Space_Grotesk'] text-xl font-black uppercase tracking-tighter">My Reservations</h3>
+                        <button id="toggle-history" class="text-[10px] font-black uppercase tracking-widest text-[#f7bb07] border-b border-[#f7bb07]">Show All</button>
+                    </div>
+                    <div id="reservations-list" class="space-y-4">
+                        <div class="flex items-center justify-center py-12">
+                            <p class="text-[#d3c5ac] text-sm uppercase tracking-widest animate-pulse">Synchronizing...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="/static/scripts/perfil.js"></script>
+</body>
+</html>

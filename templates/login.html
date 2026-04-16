@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>RESERMAX | Athlete Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;900&family=Manrope:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link rel="stylesheet" href="/static/css/index.css">
+</head>
+<body class="bg-[#0a0a0a] text-[#e5e2e1] font-['Manrope'] selection:bg-[#f7bb07] selection:text-[#000000] flex items-center justify-center min-h-screen p-6">
+    <div class="absolute inset-0 overflow-hidden pointer-events-none">
+        <div class="absolute top-1/4 -left-24 w-96 h-96 bg-[#f7bb07]/10 rounded-full blur-[120px]"></div>
+        <div class="absolute bottom-1/4 -right-24 w-96 h-96 bg-[#a5d396]/5 rounded-full blur-[120px]"></div>
+    </div>
+
+    <div class="w-full max-w-md relative z-10">
+        <div class="flex flex-col items-center mb-12">
+            <span class="text-4xl font-black tracking-tighter font-['Space_Grotesk'] uppercase mb-4 text-[#f7bb07]">RESERMAX</span>
+            <h1 class="font-['Space_Grotesk'] text-3xl font-black tracking-tighter uppercase text-center">
+                {% if show_register %}Create Profile{% else %}Athlete Portal{% endif %}
+            </h1>
+            <p class="text-[#d3c5ac] text-xs uppercase tracking-widest mt-2">
+                {% if show_register %}Join the Kinetic Zone{% else %}Enter the Kinetic Zone{% endif %}
+            </p>
+        </div>
+
+        {% if error %}
+        <div class="mb-6 bg-red-500/10 border border-red-500/30 text-red-400 px-6 py-4 rounded-xl text-xs font-bold uppercase tracking-widest text-center">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <div class="bg-[#131313] p-8 rounded-3xl border border-white/5 shadow-2xl">
+            {% if show_register %}
+            <!-- REGISTER FORM -->
+            <form method="POST" action="/register" class="space-y-5">
+                <div>
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2 ml-1">Full Name</label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#d3c5ac] text-lg">person</span>
+                        <input name="username" class="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm focus:border-[#f7bb07] focus:ring-1 focus:ring-[#f7bb07] transition-all outline-none" placeholder="Your name" type="text" required/>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2 ml-1">Email Address</label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#d3c5ac] text-lg">mail</span>
+                        <input name="email" class="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm focus:border-[#f7bb07] focus:ring-1 focus:ring-[#f7bb07] transition-all outline-none" placeholder="athlete@resermax.com" type="email" required/>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2 ml-1">Access Key</label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#d3c5ac] text-lg">lock</span>
+                        <input name="password" class="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm focus:border-[#f7bb07] focus:ring-1 focus:ring-[#f7bb07] transition-all outline-none" placeholder="••••••••" type="password" required/>
+                    </div>
+                </div>
+                <button class="w-full bg-[#f7bb07] text-black py-4 rounded-xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-[#f7bb07]/10" type="submit">
+                    Create Profile
+                </button>
+            </form>
+            <div class="mt-8 pt-8 border-t border-white/5">
+                <p class="text-center text-[10px] font-bold uppercase tracking-widest text-[#d3c5ac]">Already have an account?</p>
+                <a href="/login" class="block w-full mt-4 py-4 rounded-xl border border-white/10 font-black uppercase tracking-widest text-xs hover:bg-white/5 transition-all text-center">
+                    Sign In
+                </a>
+            </div>
+
+            {% else %}
+            <!-- LOGIN FORM -->
+            <form method="POST" action="/login" class="space-y-6">
+                <div>
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2 ml-1">Email Address</label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#d3c5ac] text-lg">mail</span>
+                        <input name="email" class="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm focus:border-[#f7bb07] focus:ring-1 focus:ring-[#f7bb07] transition-all outline-none" placeholder="athlete@resermax.com" type="email" required/>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2 ml-1">Access Key</label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#d3c5ac] text-lg">lock</span>
+                        <input name="password" class="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm focus:border-[#f7bb07] focus:ring-1 focus:ring-[#f7bb07] transition-all outline-none" placeholder="••••••••" type="password" required/>
+                    </div>
+                </div>
+                <div class="flex items-center justify-end px-1">
+                    <a class="text-[10px] font-bold uppercase tracking-widest text-[#f7bb07] hover:underline" href="#">Forgot Key?</a>
+                </div>
+                <button class="w-full bg-[#f7bb07] text-black py-4 rounded-xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-[#f7bb07]/10" type="submit">
+                    Authorize Access
+                </button>
+            </form>
+            <div class="mt-8 pt-8 border-t border-white/5">
+                <p class="text-center text-[10px] font-bold uppercase tracking-widest text-[#d3c5ac]">New to the Gallery?</p>
+                <a href="/register" class="block w-full mt-4 py-4 rounded-xl border border-white/10 font-black uppercase tracking-widest text-xs hover:bg-white/5 transition-all text-center">
+                    Create Athlete Profile
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+        <p class="text-center mt-8 text-[10px] font-bold uppercase tracking-widest text-[#d3c5ac]/40">
+            Secure session encryption enabled.
+        </p>
+    </div>
+</body>
+</html>
