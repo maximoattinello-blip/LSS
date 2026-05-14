@@ -80,3 +80,4 @@ The database (`resermax.db`) is created automatically on first run with seed dat
 | GET    | `/api/courts/all`            | Admin    | All courts (incl. inactive)|
 | POST   | `/api/admin/court`           | Admin    | Add new court              |
 | POST   | `/api/admin/court/<id>/toggle`| Admin   | Toggle court availability  |
+# LSS
