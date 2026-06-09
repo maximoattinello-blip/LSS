@@ -1,160 +1,221 @@
 <!DOCTYPE html>
 <html class="dark" lang="en">
 <head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>RESERMAX | Admin Control</title>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;900&family=Manrope:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link rel="stylesheet" href="/static/css/index.css">
+	<meta charset="utf-8"/>
+	<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+	<title>RESERMAX | Control Admin</title>
+	<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;900&family=Manrope:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+	<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+	<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+	<link rel="stylesheet" href="/static/css/index.css">
 </head>
 <body class="bg-[#0a0a0a] text-[#e5e2e1] font-['Manrope'] selection:bg-[#f7bb07] selection:text-[#000000] flex min-h-screen">
 
-    <!-- Sidebar -->
-    <aside class="w-20 lg:w-64 bg-[#131313] border-r border-white/5 flex flex-col items-center lg:items-stretch py-8 transition-all duration-300">
-        <div class="px-6 mb-12 flex items-center gap-3">
-            <span class="hidden lg:block text-xl font-black tracking-tighter font-['Space_Grotesk'] uppercase text-[#f7bb07]">RESERMAX</span>
-        </div>
-        <nav class="flex-1 px-4 space-y-2">
-            <a href="/admin" class="flex items-center gap-4 px-4 py-3 rounded-xl bg-[#f7bb07] text-black group transition-all">
-                <span class="material-symbols-outlined">dashboard</span>
-                <span class="hidden lg:block font-bold text-xs uppercase tracking-widest">Dashboard</span>
-            </a>
-            <a href="#" id="nav-facilities" class="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 text-[#d3c5ac] hover:text-white transition-all">
-                <span class="material-symbols-outlined">sports_soccer</span>
-                <span class="hidden lg:block font-bold text-xs uppercase tracking-widest">Facilities</span>
-            </a>
-        </nav>
-        <div class="px-4 mt-auto">
-            <a href="/logout" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-red-500/10 text-red-500 transition-all">
-                <span class="material-symbols-outlined">logout</span>
-                <span class="hidden lg:block font-bold text-xs uppercase tracking-widest">Exit Admin</span>
-            </a>
-        </div>
-    </aside>
+	<!-- Sidebar -->
+	<aside class="w-20 lg:w-64 bg-[#131313] border-r border-white/5 flex flex-col items-center lg:items-stretch py-8 transition-all duration-300">
+		<div class="px-6 mb-12 flex items-center gap-3">
+			<span class="hidden lg:block text-xl font-black tracking-tighter font-['Space_Grotesk'] uppercase text-[#f7bb07]">RESERMAX</span>
+		</div>
+		<nav class="flex-1 px-4 space-y-2">
+			<a href="#" id="nav-dashboard" data-section="dashboard" class="nav-link flex items-center gap-4 px-4 py-3 rounded-xl bg-[#f7bb07] text-black group transition-all">
+				<span class="material-symbols-outlined">dashboard</span>
+				<span class="hidden lg:block font-bold text-xs uppercase tracking-widest">Panel de Control</span>
+			</a>
+			<a href="#" id="nav-facilities" data-section="facilities" class="nav-link flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 text-[#d3c5ac] hover:text-white transition-all">
+				<span class="material-symbols-outlined">sports_soccer</span>
+				<span class="hidden lg:block font-bold text-xs uppercase tracking-widest">Instalaciones</span>
+			</a>
+			<a href="#" id="nav-calendar" data-section="calendar" class="nav-link flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 text-[#d3c5ac] hover:text-white transition-all">
+				<span class="material-symbols-outlined">event_busy</span>
+				<span class="hidden lg:block font-bold text-xs uppercase tracking-widest">Días Inhabilitados</span>
+			</a>
+		</nav>
+		<div class="px-4 mt-auto">
+			<a href="/logout" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-red-500/10 text-red-500 transition-all">
+				<span class="material-symbols-outlined">logout</span>
+				<span class="hidden lg:block font-bold text-xs uppercase tracking-widest">Salir Admin</span>
+			</a>
+		</div>
+	</aside>
 
-    <!-- Main Content -->
-    <main class="flex-1 p-8 lg:p-12 overflow-y-auto">
-        <header class="flex justify-between items-center mb-12">
-            <div>
-                <h1 class="font-['Space_Grotesk'] text-4xl font-black tracking-tighter uppercase">System Overview</h1>
-                <p class="text-[#d3c5ac] text-xs uppercase tracking-widest mt-1">Real-time facility management</p>
-            </div>
-            <div class="flex items-center gap-4">
-                <div class="bg-[#131313] px-4 py-2 rounded-lg border border-white/5 flex items-center gap-3">
-                    <span class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
-                    <span class="text-[10px] font-black uppercase tracking-widest">Server: Operational</span>
-                </div>
-            </div>
-        </header>
+	<!-- Main Content -->
+	<main class="flex-1 p-8 lg:p-12 overflow-y-auto">
 
-        <!-- Stats Bento -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-            <div class="bg-[#131313] p-6 rounded-2xl border border-white/5">
-                <span class="text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2 block">Total Revenue</span>
-                <div class="flex items-baseline gap-2">
-                    <span id="stat-revenue" class="text-3xl font-black">—</span>
-                    <span class="text-green-500 text-xs font-bold">Live</span>
-                </div>
-            </div>
-            <div class="bg-[#131313] p-6 rounded-2xl border border-white/5">
-                <span class="text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2 block">Active Bookings</span>
-                <div class="flex items-baseline gap-2">
-                    <span id="stat-bookings" class="text-3xl font-black">—</span>
-                    <span class="text-green-500 text-xs font-bold">Confirmed</span>
-                </div>
-            </div>
-            <div class="bg-[#131313] p-6 rounded-2xl border border-white/5">
-                <span class="text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2 block">Total Athletes</span>
-                <div class="flex items-baseline gap-2">
-                    <span id="stat-users" class="text-3xl font-black">—</span>
-                    <span class="text-[#f7bb07] text-xs font-bold">Members</span>
-                </div>
-            </div>
-            <div class="bg-[#131313] p-6 rounded-2xl border border-white/5">
-                <span class="text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2 block">New Today</span>
-                <div class="flex items-baseline gap-2">
-                    <span id="stat-new-today" class="text-3xl font-black">—</span>
-                    <span class="text-[#f7bb07] text-xs font-bold">Joined</span>
-                </div>
-            </div>
-        </div>
+		<!-- ══ SECCIÓN: DASHBOARD ══ -->
+		<section id="section-dashboard">
+			<header class="flex justify-between items-center mb-12">
+				<div>
+					<h1 class="font-['Space_Grotesk'] text-4xl font-black tracking-tighter uppercase">Resumen del Sistema</h1>
+					<p class="text-[#d3c5ac] text-xs uppercase tracking-widest mt-1">Gestión de instalaciones en tiempo real</p>
+				</div>
+				<div class="flex items-center gap-4">
+					<div class="bg-[#131313] px-4 py-2 rounded-lg border border-white/5 flex items-center gap-3">
+						<span class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
+						<span class="text-[10px] font-black uppercase tracking-widest">Servidor: Operativo</span>
+					</div>
+				</div>
+			</header>
 
-        <!-- Main Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Recent Bookings Table -->
-            <div class="lg:col-span-2 bg-[#131313] rounded-3xl p-8 border border-white/5">
-                <div class="flex justify-between items-center mb-8">
-                    <h3 class="font-['Space_Grotesk'] text-xl font-black uppercase tracking-tighter">Recent Activity</h3>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left">
-                        <thead>
-                            <tr class="border-b border-white/5">
-                                <th class="pb-4 text-[10px] font-black uppercase tracking-widest text-[#d3c5ac]">Athlete</th>
-                                <th class="pb-4 text-[10px] font-black uppercase tracking-widest text-[#d3c5ac]">Facility</th>
-                                <th class="pb-4 text-[10px] font-black uppercase tracking-widest text-[#d3c5ac]">Time</th>
-                                <th class="pb-4 text-[10px] font-black uppercase tracking-widest text-[#d3c5ac]">Status</th>
-                                <th class="pb-4 text-[10px] font-black uppercase tracking-widest text-[#d3c5ac]">Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody id="admin-bookings-list">
-                            <tr><td colspan="5" class="py-8 text-center text-[#d3c5ac] text-xs uppercase tracking-widest animate-pulse">Loading...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+				<div class="bg-[#131313] p-6 rounded-2xl border border-white/5">
+					<span class="text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2 block">Ingresos Totales</span>
+					<div class="flex items-baseline gap-2">
+						<span id="stat-revenue" class="text-3xl font-black">—</span>
+						<span class="text-green-500 text-xs font-bold">En Vivo</span>
+					</div>
+				</div>
+				<div class="bg-[#131313] p-6 rounded-2xl border border-white/5">
+					<span class="text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2 block">Reservas Activas</span>
+					<div class="flex items-baseline gap-2">
+						<span id="stat-bookings" class="text-3xl font-black">—</span>
+						<span class="text-green-500 text-xs font-bold">Confirmado</span>
+					</div>
+				</div>
+				<div class="bg-[#131313] p-6 rounded-2xl border border-white/5">
+					<span class="text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2 block">Atletas Totales</span>
+					<div class="flex items-baseline gap-2">
+						<span id="stat-users" class="text-3xl font-black">—</span>
+						<span class="text-[#f7bb07] text-xs font-bold">Miembros</span>
+					</div>
+				</div>
+				<div class="bg-[#131313] p-6 rounded-2xl border border-white/5">
+					<span class="text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2 block">Nuevos Hoy</span>
+					<div class="flex items-baseline gap-2">
+						<span id="stat-new-today" class="text-3xl font-black">—</span>
+						<span class="text-[#f7bb07] text-xs font-bold">Se Unieron</span>
+					</div>
+				</div>
+			</div>
 
-            <!-- Facility Management -->
-            <div class="bg-[#131313] rounded-3xl p-8 border border-white/5">
-                <h3 class="font-['Space_Grotesk'] text-xl font-black uppercase tracking-tighter mb-8">Facility Status</h3>
-                <div id="facilities-list" class="space-y-4">
-                    <p class="text-[#d3c5ac] text-xs uppercase tracking-widest animate-pulse">Loading...</p>
-                </div>
-                <button id="add-facility-btn" class="mt-6 w-full py-4 rounded-xl border-2 border-dashed border-white/10 text-[#d3c5ac] hover:border-[#f7bb07] hover:text-[#f7bb07] transition-all flex items-center justify-center gap-2">
-                    <span class="material-symbols-outlined">add</span>
-                    <span class="text-[10px] font-black uppercase tracking-widest">Add Facility</span>
-                </button>
-            </div>
-        </div>
-    </main>
+			<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+				<div class="lg:col-span-2 bg-[#131313] rounded-3xl p-8 border border-white/5">
+					<h3 class="font-['Space_Grotesk'] text-xl font-black uppercase tracking-tighter mb-8">Actividad Reciente</h3>
+					<div class="overflow-x-auto">
+						<table class="w-full text-left">
+							<thead>
+								<tr class="border-b border-white/5">
+									<th class="pb-4 text-[10px] font-black uppercase tracking-widest text-[#d3c5ac]">Atleta</th>
+									<th class="pb-4 text-[10px] font-black uppercase tracking-widest text-[#d3c5ac]">Instalación</th>
+									<th class="pb-4 text-[10px] font-black uppercase tracking-widest text-[#d3c5ac]">Hora</th>
+									<th class="pb-4 text-[10px] font-black uppercase tracking-widest text-[#d3c5ac]">Estado</th>
+									<th class="pb-4 text-[10px] font-black uppercase tracking-widest text-[#d3c5ac]">Monto</th>
+								</tr>
+							</thead>
+							<tbody id="admin-bookings-list">
+								<tr><td colspan="5" class="py-8 text-center text-[#d3c5ac] text-xs uppercase tracking-widest animate-pulse">Cargando...</td></tr>
+							</tbody>
+						</table>
+					</div>
+				</div>
 
-    <!-- Add Facility Modal -->
-    <div id="add-facility-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-        <div class="bg-[#131313] rounded-3xl p-8 w-full max-w-md border border-white/10">
-            <h3 class="font-['Space_Grotesk'] text-xl font-black uppercase tracking-tighter mb-6">Add New Facility</h3>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2">Name</label>
-                    <input id="new-court-name" class="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm outline-none focus:border-[#f7bb07]" placeholder="Soccer Pitch C"/>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2">Type</label>
-                    <select id="new-court-type" class="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm outline-none focus:border-[#f7bb07]">
-                        <option value="Soccer Pitch">Soccer Pitch</option>
-                        <option value="Tennis Court">Tennis Court</option>
-                        <option value="Paddle Arena">Paddle Arena</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2">Price ($)</label>
-                    <input id="new-court-price" type="number" class="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm outline-none focus:border-[#f7bb07]" placeholder="45.00"/>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2">Points Multiplier</label>
-                    <input id="new-court-multiplier" type="number" step="0.1" class="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm outline-none focus:border-[#f7bb07]" placeholder="1.5"/>
-                </div>
-            </div>
-            <div class="flex gap-4 mt-8">
-                <button id="cancel-add-facility" class="flex-1 py-3 rounded-xl border border-white/10 font-black uppercase tracking-widest text-xs hover:bg-white/5 transition-all">Cancel</button>
-                <button id="confirm-add-facility" class="flex-1 py-3 rounded-xl bg-[#f7bb07] text-black font-black uppercase tracking-widest text-xs hover:scale-[1.02] transition-all">Add Facility</button>
-            </div>
-        </div>
-    </div>
+				<div class="bg-[#131313] rounded-3xl p-8 border border-white/5">
+					<h3 class="font-['Space_Grotesk'] text-xl font-black uppercase tracking-tighter mb-8">Estado de Instalaciones</h3>
+					<div id="facilities-list-dashboard" class="space-y-4">
+						<p class="text-[#d3c5ac] text-xs uppercase tracking-widest animate-pulse">Cargando...</p>
+					</div>
+				</div>
+			</div>
+		</section>
 
-    <div id="toast" class="toast"></div>
+		<!-- ══ SECCIÓN: INSTALACIONES ══ -->
+		<section id="section-facilities" class="hidden">
+			<header class="mb-12">
+				<h1 class="font-['Space_Grotesk'] text-4xl font-black tracking-tighter uppercase">Instalaciones</h1>
+				<p class="text-[#d3c5ac] text-xs uppercase tracking-widest mt-1">Gestión de canchas y disponibilidad</p>
+			</header>
+			<div class="bg-[#131313] rounded-3xl p-8 border border-white/5">
+				<div class="flex justify-between items-center mb-6">
+					<h3 class="font-['Space_Grotesk'] text-xl font-black uppercase tracking-tighter">Todas las Canchas</h3>
+					<button id="add-facility-btn" class="flex items-center gap-2 bg-[#f7bb07] text-black px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest">
+						<span class="material-symbols-outlined text-sm">add</span> Agregar
+					</button>
+				</div>
+				<div id="facilities-list" class="space-y-4">
+					<p class="text-[#d3c5ac] text-xs uppercase tracking-widest animate-pulse">Cargando...</p>
+				</div>
+			</div>
+		</section>
 
-    <script src="/static/scripts/admin.js"></script>
+		<!-- ══ SECCIÓN: CALENDARIO / DÍAS INHABILITADOS ══ -->
+		<section id="section-calendar" class="hidden">
+			<header class="mb-12">
+				<h1 class="font-['Space_Grotesk'] text-4xl font-black tracking-tighter uppercase">Días Inhabilitados</h1>
+				<p class="text-[#d3c5ac] text-xs uppercase tracking-widest mt-1">Bloqueá fechas para evitar reservas</p>
+			</header>
+
+			<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+				<!-- Agregar día -->
+				<div class="bg-[#131313] rounded-3xl p-8 border border-white/5">
+					<h3 class="font-['Space_Grotesk'] text-xl font-black uppercase tracking-tighter mb-6">Inhabilitar Fecha</h3>
+					<div class="space-y-5">
+						<div>
+							<label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2">Fecha a Bloquear</label>
+							<input id="disable-date-input" type="date" class="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm outline-none focus:border-[#f7bb07]"/>
+						</div>
+						<div>
+							<label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2">Tipo de Bloqueo</label>
+							<div class="grid grid-cols-2 gap-3">
+								<button id="type-once" data-recurring="0" class="recurring-type-btn py-3 rounded-xl border-2 border-[#f7bb07] text-[#f7bb07] text-xs font-black uppercase tracking-widest transition-all">Solo Este Año</button>
+								<button id="type-recurring" data-recurring="1" class="recurring-type-btn py-3 rounded-xl border-2 border-white/10 text-[#d3c5ac] text-xs font-black uppercase tracking-widest transition-all hover:border-white/30">Todos los Años</button>
+							</div>
+							<p class="mt-2 text-[10px] text-[#d3c5ac]/60 uppercase tracking-widest" id="recurring-hint">Esta fecha exacta será bloqueada.</p>
+						</div>
+						<div>
+							<label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2">Razón (opcional)</label>
+							<input id="disable-reason-input" type="text" placeholder="Ej: Mantenimiento, Feriado, Evento privado..." class="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm outline-none focus:border-[#f7bb07]"/>
+						</div>
+						<button id="add-disabled-day-btn" class="w-full py-4 rounded-xl bg-[#f7bb07] text-black font-black uppercase tracking-widest text-xs hover:scale-[1.02] transition-all">
+							Bloquear Fecha
+						</button>
+					</div>
+				</div>
+
+				<!-- Lista de días inhabilitados -->
+				<div class="bg-[#131313] rounded-3xl p-8 border border-white/5">
+					<h3 class="font-['Space_Grotesk'] text-xl font-black uppercase tracking-tighter mb-6">Fechas Bloqueadas</h3>
+					<div id="disabled-days-list" class="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+						<p class="text-[#d3c5ac] text-xs uppercase tracking-widest animate-pulse">Cargando...</p>
+					</div>
+				</div>
+			</div>
+		</section>
+
+	</main>
+
+	<!-- Add Facility Modal -->
+	<div id="add-facility-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+		<div class="bg-[#131313] rounded-3xl p-8 w-full max-w-md border border-white/10">
+			<h3 class="font-['Space_Grotesk'] text-xl font-black uppercase tracking-tighter mb-6">Agregar Nueva Instalación</h3>
+			<div class="space-y-4">
+				<div>
+					<label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2">Nombre</label>
+					<input id="new-court-name" class="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm outline-none focus:border-[#f7bb07]" placeholder="Cancha de Fútbol C"/>
+				</div>
+				<div>
+					<label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2">Tipo</label>
+					<select id="new-court-type" class="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm outline-none focus:border-[#f7bb07]">
+						<option value="Soccer Pitch">Cancha de Fútbol</option>
+						<option value="Tennis Court">Cancha de Tenis</option>
+						<option value="Paddle Arena">Cancha de Pádel</option>
+					</select>
+				</div>
+				<div>
+					<label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2">Precio ($)</label>
+					<input id="new-court-price" type="number" class="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm outline-none focus:border-[#f7bb07]" placeholder="45.00"/>
+				</div>
+				<div>
+					<label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2">Multiplicador de Puntos</label>
+					<input id="new-court-multiplier" type="number" step="0.1" class="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm outline-none focus:border-[#f7bb07]" placeholder="1.5"/>
+				</div>
+			</div>
+			<div class="flex gap-4 mt-8">
+				<button id="cancel-add-facility" class="flex-1 py-3 rounded-xl border border-white/10 font-black uppercase tracking-widest text-xs hover:bg-white/5 transition-all">Cancelar</button>
+				<button id="confirm-add-facility" class="flex-1 py-3 rounded-xl bg-[#f7bb07] text-black font-black uppercase tracking-widest text-xs hover:scale-[1.02] transition-all">Agregar</button>
+			</div>
+		</div>
+	</div>
+
+	<div id="toast" class="toast"></div>
+	<script src="/static/scripts/admin.js"></script>
 </body>
 </html>

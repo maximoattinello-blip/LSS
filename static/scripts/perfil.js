@@ -18,7 +18,7 @@ async function loadProfile() {
 
         document.getElementById('user-name').textContent = user.username;
         document.getElementById('user-email').textContent = user.email;
-        document.getElementById('user-since').textContent = 'Since ' + (user.member_since || '—');
+        document.getElementById('user-since').textContent = 'Desde ' + (user.member_since || '—');
         document.getElementById('user-points').textContent = user.points.toLocaleString();
         document.getElementById('user-avatar-letter').textContent = user.username[0].toUpperCase();
 
@@ -57,14 +57,15 @@ function renderReservations() {
 
     if (!items.length) {
         list.innerHTML = `<div class="text-center py-12">
-            <p class="text-[#d3c5ac] text-sm uppercase tracking-widest">No reservations found.</p>
-            <a href="/" class="inline-block mt-4 text-[#f7bb07] text-xs font-black uppercase tracking-widest border-b border-[#f7bb07]">Book a Court</a>
+            <p class="text-[#d3c5ac] text-sm uppercase tracking-widest">No hay reservas encontradas.</p>
+            <a href="/" class="inline-block mt-4 text-[#f7bb07] text-xs font-black uppercase tracking-widest border-b border-[#f7bb07]">Reservar una Cancha</a>
         </div>`;
         return;
     }
 
     list.innerHTML = items.map(r => {
-        const dt = new Date(r.fecha_hora);
+        const dt = new Date(r.start_datetime,
+                            r.end_datetime);
         const isConfirmed = r.estado === 'confirmed';
         const isPast = dt < new Date();
         const canCancel = isConfirmed && !isPast && (dt - new Date() > 24 * 60 * 60 * 1000);
@@ -97,25 +98,25 @@ function renderReservations() {
 }
 
 async function cancelReservation(id) {
-    if (!confirm('Cancel this reservation?')) return;
+    if (!confirm('¿Cancelar esta reserva?')) return;
     try {
         const res = await fetch(`/api/cancel/${id}`, { method: 'POST' });
         const data = await res.json();
         if (data.success) {
-            showToast('Reservation cancelled', 'success');
+            showToast('Reserva cancelada', 'success');
             await loadReservations();
             await loadProfile();
         } else {
-            showToast(data.error || 'Cannot cancel', 'error');
+            showToast(data.error || 'No se puede cancelar', 'error');
         }
     } catch (e) {
-        showToast('Error cancelling', 'error');
+        showToast('Error al cancelar', 'error');
     }
 }
 
 document.getElementById('toggle-history')?.addEventListener('click', () => {
     showAll = !showAll;
-    document.getElementById('toggle-history').textContent = showAll ? 'Show Active' : 'Show All';
+    document.getElementById('toggle-history').textContent = showAll ? 'Mostrar Activas' : 'Mostrar Todo';
     renderReservations();
 });
 

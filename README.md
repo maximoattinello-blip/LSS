@@ -1,4 +1,4 @@
-# RESERMAX – Full Stack Setup
+# RESERMAX – Setup
 
 ## Stack
 - **Backend**: Python / Flask

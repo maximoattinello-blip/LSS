@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>RESERMAX | Athlete Login</title>
+    <title>RESERMAX | Login de Atleta</title>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;900&family=Manrope:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
@@ -19,10 +19,10 @@
         <div class="flex flex-col items-center mb-12">
             <span class="text-4xl font-black tracking-tighter font-['Space_Grotesk'] uppercase mb-4 text-[#f7bb07]">RESERMAX</span>
             <h1 class="font-['Space_Grotesk'] text-3xl font-black tracking-tighter uppercase text-center">
-                {% if show_register %}Create Profile{% else %}Athlete Portal{% endif %}
+                {% if show_register %}Crear Perfil{% else %}Portal de Atleta{% endif %}
             </h1>
             <p class="text-[#d3c5ac] text-xs uppercase tracking-widest mt-2">
-                {% if show_register %}Join the Kinetic Zone{% else %}Enter the Kinetic Zone{% endif %}
+                {% if show_register %}Unirse a la Zona Cinética{% else %}Ingresa a la Zona Cinética{% endif %}
             </p>
         </div>
 
@@ -37,34 +37,34 @@
             <!-- REGISTER FORM -->
             <form method="POST" action="/register" class="space-y-5">
                 <div>
-                    <label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2 ml-1">Full Name</label>
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2 ml-1">Nombre Completo</label>
                     <div class="relative">
                         <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#d3c5ac] text-lg">person</span>
-                        <input name="username" class="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm focus:border-[#f7bb07] focus:ring-1 focus:ring-[#f7bb07] transition-all outline-none" placeholder="Your name" type="text" required/>
+                        <input name="username" class="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm focus:border-[#f7bb07] focus:ring-1 focus:ring-[#f7bb07] transition-all outline-none" placeholder="Tu nombre" type="text" required/>
                     </div>
                 </div>
                 <div>
-                    <label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2 ml-1">Email Address</label>
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2 ml-1">Dirección de Correo</label>
                     <div class="relative">
                         <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#d3c5ac] text-lg">mail</span>
-                        <input name="email" class="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm focus:border-[#f7bb07] focus:ring-1 focus:ring-[#f7bb07] transition-all outline-none" placeholder="athlete@resermax.com" type="email" required/>
+                        <input name="email" class="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm focus:border-[#f7bb07] focus:ring-1 focus:ring-[#f7bb07] transition-all outline-none" placeholder="atleta@resermax.com" type="email" required/>
                     </div>
                 </div>
                 <div>
-                    <label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2 ml-1">Access Key</label>
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2 ml-1">Clave de Acceso</label>
                     <div class="relative">
                         <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#d3c5ac] text-lg">lock</span>
                         <input name="password" class="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm focus:border-[#f7bb07] focus:ring-1 focus:ring-[#f7bb07] transition-all outline-none" placeholder="••••••••" type="password" required/>
                     </div>
                 </div>
                 <button class="w-full bg-[#f7bb07] text-black py-4 rounded-xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-[#f7bb07]/10" type="submit">
-                    Create Profile
+                    Crear Perfil
                 </button>
             </form>
             <div class="mt-8 pt-8 border-t border-white/5">
-                <p class="text-center text-[10px] font-bold uppercase tracking-widest text-[#d3c5ac]">Already have an account?</p>
+                <p class="text-center text-[10px] font-bold uppercase tracking-widest text-[#d3c5ac]">Ya tienes cuenta?</p>
                 <a href="/login" class="block w-full mt-4 py-4 rounded-xl border border-white/10 font-black uppercase tracking-widest text-xs hover:bg-white/5 transition-all text-center">
-                    Sign In
+                    Iniciar Sesión
                 </a>
             </div>
 
@@ -72,37 +72,37 @@
             <!-- LOGIN FORM -->
             <form method="POST" action="/login" class="space-y-6">
                 <div>
-                    <label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2 ml-1">Email Address</label>
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2 ml-1">Dirección de Correo</label>
                     <div class="relative">
                         <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#d3c5ac] text-lg">mail</span>
-                        <input name="email" class="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm focus:border-[#f7bb07] focus:ring-1 focus:ring-[#f7bb07] transition-all outline-none" placeholder="athlete@resermax.com" type="email" required/>
+                        <input name="email" class="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm focus:border-[#f7bb07] focus:ring-1 focus:ring-[#f7bb07] transition-all outline-none" placeholder="atleta@resermax.com" type="email" required/>
                     </div>
                 </div>
                 <div>
-                    <label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2 ml-1">Access Key</label>
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2 ml-1">Clave de Acceso</label>
                     <div class="relative">
                         <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#d3c5ac] text-lg">lock</span>
                         <input name="password" class="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm focus:border-[#f7bb07] focus:ring-1 focus:ring-[#f7bb07] transition-all outline-none" placeholder="••••••••" type="password" required/>
                     </div>
                 </div>
                 <div class="flex items-center justify-end px-1">
-                    <a class="text-[10px] font-bold uppercase tracking-widest text-[#f7bb07] hover:underline" href="#">Forgot Key?</a>
+                    <a class="text-[10px] font-bold uppercase tracking-widest text-[#f7bb07] hover:underline" href="#">Olvidaste la Clave?</a>
                 </div>
                 <button class="w-full bg-[#f7bb07] text-black py-4 rounded-xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-[#f7bb07]/10" type="submit">
-                    Authorize Access
+                    Autorizar Acceso
                 </button>
             </form>
             <div class="mt-8 pt-8 border-t border-white/5">
-                <p class="text-center text-[10px] font-bold uppercase tracking-widest text-[#d3c5ac]">New to the Gallery?</p>
+                <p class="text-center text-[10px] font-bold uppercase tracking-widest text-[#d3c5ac]">Nuevo en la Galería?</p>
                 <a href="/register" class="block w-full mt-4 py-4 rounded-xl border border-white/10 font-black uppercase tracking-widest text-xs hover:bg-white/5 transition-all text-center">
-                    Create Athlete Profile
+                    Crear Perfil de Atleta
                 </a>
             </div>
             {% endif %}
         </div>
 
         <p class="text-center mt-8 text-[10px] font-bold uppercase tracking-widest text-[#d3c5ac]/40">
-            Secure session encryption enabled.
+            Encriptación de sesión segura habilitada.
         </p>
     </div>
 </body>
