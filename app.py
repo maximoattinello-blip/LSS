@@ -169,8 +169,6 @@ def seed_rewards():
 		conn.commit()
 		print("Premios iniciales insertados.")
 	else:
-		# Actualizar is_free_hours/free_hours en premios existentes que sean de acceso/horas
-		# (por si la DB ya tenía datos pero sin esas columnas)
 		c.execute("UPDATE rewards SET is_free_hours=1, free_hours=1 WHERE name LIKE '%1 Hora%Gratis%' AND is_free_hours=0")
 		c.execute("UPDATE rewards SET is_free_hours=1, free_hours=2 WHERE name LIKE '%2 Hora%Gratis%' AND is_free_hours=0")
 		c.execute("UPDATE rewards SET is_free_hours=1, free_hours=3 WHERE name LIKE '%3 Hora%Gratis%' AND is_free_hours=0")
@@ -181,6 +179,28 @@ def seed_rewards():
 init_db()
 migrate_db()
 seed_rewards()
+
+# ==========================================
+# LÓGICA DE DÍAS CON BONUS DE PUNTOS
+# ==========================================
+# Días de la semana con baja concurrencia → bonus de +50% de puntos
+# 0=Lunes, 1=Martes, 2=Miércoles, 3=Jueves, 4=Viernes, 5=Sábado, 6=Domingo
+LOW_DEMAND_DAYS = [0, 1]  # Lunes y Martes
+LOW_DEMAND_BONUS = 1.5    # Multiplicador extra (+50%)
+
+def is_low_demand_day(dt):
+	"""Devuelve True si la fecha cae en un día de baja demanda."""
+	return dt.weekday() in LOW_DEMAND_DAYS
+
+def get_low_demand_info():
+	"""Devuelve info sobre los días de baja demanda para el frontend."""
+	day_names = {0: 'Lunes', 1: 'Martes', 2: 'Miércoles', 3: 'Jueves', 4: 'Viernes', 5: 'Sábado', 6: 'Domingo'}
+	return {
+		'days': LOW_DEMAND_DAYS,
+		'day_names': [day_names[d] for d in LOW_DEMAND_DAYS],
+		'bonus_multiplier': LOW_DEMAND_BONUS,
+		'bonus_percent': int((LOW_DEMAND_BONUS - 1) * 100)
+	}
 
 # ==========================================
 # AUTH HELPERS
@@ -336,6 +356,12 @@ def api_court_slots(court_id):
 		except Exception:
 			pass
 	return jsonify(booked)
+
+# ── NUEVO: endpoint para obtener configuración de días de baja demanda ──
+@app.route('/api/low-demand-days')
+def api_low_demand_days():
+	"""Devuelve qué días de la semana son de baja demanda y el bonus de puntos."""
+	return jsonify(get_low_demand_info())
 
 @app.route('/api/reservations')
 @login_required
@@ -494,10 +520,18 @@ def api_reserve():
 		points_earned = 0
 		paid          = 0
 	else:
-		hour       = start_dt.hour
+		# Calcular puntos con bonus de día de baja demanda
 		multiplier = court['points_multiplier']
+
+		# Bonus por horario pico (horas de menor afluencia en el día)
+		hour = start_dt.hour
 		if (8 <= hour < 11) or (13 <= hour < 16) or hour >= 22:
 			multiplier *= 2.5
+
+		# Bonus por día de baja demanda semanal
+		if is_low_demand_day(start_dt):
+			multiplier *= LOW_DEMAND_BONUS
+
 		points_earned = int(court['price'] * multiplier * duration_hours)
 		paid          = 1
 		conn.execute('UPDATE users SET points = points + ? WHERE id=?', (points_earned, session['user_id']))
@@ -523,16 +557,30 @@ def api_cancel(res_id):
 	if not res:
 		conn.close()
 		return jsonify({'success': False, 'error': 'No encontrado'}), 404
+
+	if res['estado'] != 'confirmed':
+		conn.close()
+		return jsonify({'success': False, 'error': 'Esta reserva ya fue cancelada'}), 400
+
 	try:
 		dt = datetime.fromisoformat(res['start_datetime'])
 	except Exception:
 		conn.close()
 		return jsonify({'success': False, 'error': 'Fecha inválida'}), 400
-	if dt - datetime.now() < timedelta(hours=24):
+
+	# ── FUNCIÓN 1: Cancelación con 24h de antelación ──
+	tiempo_restante = dt - datetime.now()
+	if tiempo_restante <= timedelta(hours=24):
+		horas_restantes = int(tiempo_restante.total_seconds() / 3600)
+		if tiempo_restante.total_seconds() <= 0:
+			msg = 'No se puede cancelar una reserva que ya pasó'
+		else:
+			msg = f'Solo quedan {horas_restantes}h para la reserva. Se necesitan más de 24h de anticipación para cancelar'
 		conn.close()
-		return jsonify({'success': False, 'error': 'No se puede cancelar con menos de 24h de anticipación'}), 400
+		return jsonify({'success': False, 'error': msg}), 400
 
 	conn.execute('UPDATE reservations SET estado="cancelled" WHERE id=?', (res_id,))
+	# Descontar los puntos ganados con esa reserva (si no era gratis)
 	if not res['is_free_hours']:
 		conn.execute(
 			'UPDATE users SET points = MAX(0, points - ?) WHERE id=?',
