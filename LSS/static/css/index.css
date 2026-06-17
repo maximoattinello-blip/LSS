@@ -1,0 +1,91 @@
+/* RESERMAX – Shared CSS */
+:root {
+  --surface: #0a0a0a;
+  --surface-container-low: #1a1a1a;
+  --surface-container-lowest: #111111;
+  --surface-container-high: #1f1f1f;
+  --surface-container-highest: #2a2a2a;
+  --on-surface: #e5e2e1;
+  --on-surface-variant: #d3c5ac;
+  --primary: #f7bb07;
+  --primary-container: #f7bb07;
+  --on-primary: #000000;
+  --on-primary-fixed: #000000;
+  --on-primary-container: #000000;
+  --tertiary-container: #a5d396;
+  --outline-variant: #4f4632;
+}
+
+html, body { scroll-behavior: smooth; }
+
+/* Glass card */
+.glass-card {
+  background: rgba(19, 19, 19, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Kinetic gradient button */
+.kinetic-gradient {
+  background: linear-gradient(135deg, #f7bb07 0%, #ffdc94 50%, #f7bb07 100%);
+  background-size: 200% 200%;
+  animation: gradient-shift 4s ease infinite;
+  color: #000;
+}
+
+@keyframes gradient-shift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Font aliases */
+.font-headline { font-family: 'Space Grotesk', sans-serif; }
+.font-body     { font-family: 'Manrope', sans-serif; }
+.font-label    { font-family: 'Manrope', sans-serif; }
+
+/* Tailwind colour tokens used via CSS vars */
+.bg-surface                  { background-color: var(--surface); }
+.bg-surface-container-low    { background-color: var(--surface-container-low); }
+.bg-surface-container-lowest { background-color: var(--surface-container-lowest); }
+.bg-surface-container-high   { background-color: var(--surface-container-high); }
+.bg-surface-container-highest{ background-color: var(--surface-container-highest); }
+.bg-primary-container        { background-color: var(--primary-container); }
+.bg-on-primary-container     { background-color: var(--on-surface); }
+
+.text-on-surface         { color: var(--on-surface); }
+.text-on-surface-variant { color: var(--on-surface-variant); }
+.text-primary            { color: var(--primary); }
+.text-primary-container  { color: var(--primary-container); }
+.text-tertiary-container { color: var(--tertiary-container); }
+.text-on-primary-fixed   { color: var(--on-primary-fixed); }
+.text-on-primary-container { color: var(--on-primary-container); }
+
+.border-outline-variant  { border-color: var(--outline-variant); }
+.border-primary-container{ border-color: var(--primary-container); }
+
+/* Safe area padding for mobile bottom nav */
+.pb-safe { padding-bottom: env(safe-area-inset-bottom, 16px); }
+
+/* Toast notification */
+.toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: #1f1f1f;
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #e5e2e1;
+  padding: 12px 24px;
+  border-radius: 50px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  transition: transform 0.3s ease;
+  z-index: 9999;
+  white-space: nowrap;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+.toast.success { border-color: rgba(34,197,94,0.4); color: #4ade80; }
+.toast.error   { border-color: rgba(239,68,68,0.4); color: #f87171; }
