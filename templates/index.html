@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+	<meta charset="utf-8"/>
+	<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+	<title>RESERMAX | Explorar</title>
+	<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;900&family=Manrope:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+	<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+	<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+	<link rel="stylesheet" href="/static/css/index.css">
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary selection:text-on-primary">
+
+	<!-- Top Navigation Bar -->
+	<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-6 py-4 bg-[#131313] transition-all duration-300">
+		<div class="flex items-center gap-8">
+			<div class="flex items-center gap-2">
+				<span class="text-2xl font-black tracking-tighter text-[#e5e2e1] font-headline uppercase">RESERMAX</span>
+			</div>
+			<nav class="hidden md:flex items-center gap-6">
+				<a class="text-[#f7bb07] font-bold border-b-2 border-[#f7bb07] font-label text-sm uppercase tracking-widest py-1" href="/">Explorar</a>
+				<a class="text-[#d3c5ac] hover:text-[#ffdc94] transition-colors font-label text-sm uppercase tracking-widest py-1" href="/premios">Recompensas</a>
+				{% if session.get('puesto') == 'ADM' %}
+				<a class="text-[#d3c5ac] hover:text-[#ffdc94] transition-colors font-label text-sm uppercase tracking-widest py-1" href="/admin">Admin</a>
+				{% endif %}
+			</nav>
+		</div>
+		<div class="flex items-center gap-4">
+			<div class="hidden lg:flex items-center bg-surface-container-low px-4 py-2 rounded-full border border-outline-variant/15">
+				<span class="material-symbols-outlined text-on-surface-variant mr-2">search</span>
+				<input id="search-input" class="bg-transparent border-none focus:ring-0 text-sm w-48 text-on-surface outline-none" placeholder="Buscar una cancha..."/>
+			</div>
+			{% if session.get('user_id') %}
+			<div class="flex items-center gap-3">
+				<a href="/perfil" class="h-10 w-10 rounded-full bg-[#f7bb07] flex items-center justify-center font-black text-black text-sm">
+					{{ (session.get('username') or 'U')[0].upper() }}
+				</a>
+			</div>
+			{% else %}
+			<a href="/login" class="bg-[#f7bb07] text-black px-5 py-2 rounded-lg font-black text-xs uppercase tracking-widest">Iniciar Sesión</a>
+			{% endif %}
+		</div>
+	</header>
+
+	<main class="pt-20">
+		<!-- Hero Section -->
+		<section class="relative min-h-[600px] flex flex-col justify-center px-6 lg:px-24 overflow-hidden bg-[#0d0d0d]">
+			<div class="absolute inset-0 z-0">
+				<div class="absolute inset-0 bg-gradient-to-r from-[#0a0a0a] via-[#0a0a0a]/80 to-transparent z-10"></div>
+				<div class="absolute top-0 right-0 w-2/3 h-full opacity-20" style="background: radial-gradient(ellipse at right, #f7bb07 0%, transparent 60%);"></div>
+			</div>
+			<div class="relative z-20 max-w-4xl">
+				<h1 class="font-headline text-6xl md:text-8xl font-black tracking-tighter text-on-surface leading-[0.9] mb-8">
+					DISFURTA DE LAS <span class="text-primary-container">MEJORES</span><br/>CANCHAS
+				</h1>
+				<p class="font-body text-xl text-on-surface-variant max-w-xl mb-12">
+					Reservas rapidas y faciles para cualquiera ya sea si queres entrenar. O solo jugar!
+				</p>
+				<!-- Search Bento -->
+				<div class="glass-card p-2 rounded-xl max-w-3xl flex flex-col md:flex-row gap-2 border border-outline-variant/10 shadow-2xl">
+					<div class="flex-1 flex items-center bg-surface-container-lowest px-6 py-4 rounded-lg">
+						<span class="material-symbols-outlined text-primary mr-3">sports_soccer</span>
+						<select id="court-type" class="bg-transparent border-none focus:ring-0 text-on-surface font-label w-full appearance-none outline-none">
+							<option value="">Todas las Canchas</option>
+							<option value="Soccer Pitch">Canchas de Fútbol</option>
+							<option value="Tennis Court">Canchas de Tenis</option>
+							<option value="Paddle Arena">Cancha de Pádel</option>
+						</select>
+					</div>
+					<div class="flex-1 flex items-center bg-surface-container-lowest px-6 py-4 rounded-lg">
+						<span class="material-symbols-outlined text-primary mr-3">calendar_today</span>
+						<input id="booking-date" class="bg-transparent border-none focus:ring-0 text-on-surface font-label w-full outline-none" type="datetime-local"/>
+					</div>
+					<button id="search-btn" class="kinetic-gradient px-10 py-4 rounded-lg text-on-primary-fixed font-black uppercase tracking-widest text-sm hover:scale-[1.02] active:scale-95 transition-all">
+						Buscar Canchas
+					</button>
+				</div>
+			</div>
+		</section>
+
+		<!-- Filters -->
+		<section class="px-6 lg:px-24 py-8 flex flex-wrap items-center justify-between gap-4 border-b border-white/5">
+			<div class="flex gap-3 overflow-x-auto pb-2 md:pb-0">
+				<button data-filter="" class="filter-btn active px-5 py-2 rounded-full bg-primary-container text-on-primary-container font-label text-xs font-bold uppercase tracking-widest border-2 border-primary-container">Todas</button>
+				<button data-filter="Soccer Pitch" class="filter-btn px-5 py-2 rounded-full border-2 border-outline-variant/30 text-on-surface-variant font-label text-xs font-bold uppercase tracking-widest hover:border-primary-container transition-all">Fútbol</button>
+				<button data-filter="Tennis Court" class="filter-btn px-5 py-2 rounded-full border-2 border-outline-variant/30 text-on-surface-variant font-label text-xs font-bold uppercase tracking-widest hover:border-primary-container transition-all">Tenis</button>
+				<button data-filter="Paddle Arena" class="filter-btn px-5 py-2 rounded-full border-2 border-outline-variant/30 text-on-surface-variant font-label text-xs font-bold uppercase tracking-widest hover:border-primary-container transition-all">Pádel</button>
+			</div>
+		</section>
+
+		<!-- Courts Grid -->
+		<section id="courts-grid" class="px-6 lg:px-24 py-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 min-h-[300px]">
+			<div class="col-span-full flex items-center justify-center py-16">
+				<p class="text-[#d3c5ac] text-sm uppercase tracking-widest animate-pulse">Cargando canchas...</p>
+			</div>
+		</section>
+
+<!-- Booking Modal -->
+		<div id="booking-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+			<div class="bg-[#131313] rounded-3xl p-8 w-full max-w-lg border border-white/10 shadow-2xl">
+				<div class="flex justify-between items-start mb-6">
+					<div>
+						<h3 id="modal-court-name" class="font-['Space_Grotesk'] text-2xl font-black uppercase tracking-tighter"></h3>
+						<p id="modal-court-type" class="text-[#d3c5ac] text-xs uppercase tracking-widest mt-1"></p>
+					</div>
+					<button id="modal-close" class="text-[#d3c5ac] hover:text-white transition-colors">
+						<span class="material-symbols-outlined">close</span>
+					</button>
+				</div>
+
+				<!-- Modo: normal o horas gratis -->
+				<div id="free-hours-banner" class="hidden mb-4 bg-[#f7bb07]/10 border border-[#f7bb07]/30 rounded-xl px-4 py-3 flex items-center gap-3">
+					<span class="material-symbols-outlined text-[#f7bb07]">redeem</span>
+					<div>
+						<span class="block text-[10px] font-black uppercase tracking-widest text-[#f7bb07]">Usando Horas Gratis</span>
+						<span id="free-hours-label" class="text-[10px] text-[#d3c5ac]"></span>
+					</div>
+				</div>
+
+				<div class="space-y-4 mb-6">
+					<!-- Fecha -->
+					<div>
+						<label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2">Fecha</label>
+						<input id="modal-date" type="date" class="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm outline-none focus:border-[#f7bb07] transition-all"/>
+					</div>
+
+					<!-- Duración -->
+					<div>
+						<label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2">Duración</label>
+						<div class="grid grid-cols-3 gap-2" id="duration-selector">
+							<button data-hours="1" class="duration-btn py-3 rounded-xl border-2 border-white/10 text-xs font-black uppercase tracking-widest hover:border-[#f7bb07] transition-all">1 Hora</button>
+							<button data-hours="2" class="duration-btn py-3 rounded-xl border-2 border-white/10 text-xs font-black uppercase tracking-widest hover:border-[#f7bb07] transition-all">2 Horas</button>
+							<button data-hours="3" class="duration-btn py-3 rounded-xl border-2 border-white/10 text-xs font-black uppercase tracking-widest hover:border-[#f7bb07] transition-all">3 Horas</button>
+						</div>
+					</div>
+
+					<!-- Selector de hora (bloques) -->
+					<div>
+						<label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2">Hora de Inicio</label>
+						<div id="slots-container" class="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto pr-1">
+							<p class="col-span-4 text-[#d3c5ac] text-xs text-center py-4 animate-pulse uppercase tracking-widest">Seleccioná una fecha primero</p>
+						</div>
+					</div>
+
+					<!-- Precio / Puntos -->
+					<div class="grid grid-cols-2 gap-3">
+						<div class="bg-white/5 rounded-xl p-4 border border-white/5 flex flex-col">
+							<span class="text-[10px] font-bold uppercase tracking-widest text-[#d3c5ac] mb-1">Precio</span>
+							<span id="modal-price" class="text-lg font-black text-[#f7bb07]">—</span>
+						</div>
+						<div class="bg-[#f7bb07]/5 rounded-xl p-4 border border-[#f7bb07]/10 flex flex-col">
+							<span class="text-[10px] font-bold uppercase tracking-widest text-[#d3c5ac] mb-1">Puntos Est.</span>
+							<span id="modal-points" class="text-lg font-black text-[#f7bb07]">—</span>
+						</div>
+					</div>
+				</div>
+
+				<button id="modal-confirm" class="w-full bg-[#f7bb07] text-black py-4 rounded-xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-95 transition-all">
+					Confirmar Reserva
+				</button>
+				<p id="modal-error" class="mt-3 text-center text-red-400 text-xs font-bold uppercase tracking-widest hidden"></p>
+			</div>
+
+		</div>
+
+		<!-- Wallet & Notifications Bento -->
+		<section class="px-6 lg:px-24 py-24 border-t border-white/5">
+			<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+				<div class="lg:col-span-8 glass-card p-12 rounded-xl border border-outline-variant/10 flex flex-col justify-center">
+					<h2 class="font-headline text-5xl font-black tracking-tighter text-on-surface mb-6 uppercase">Manténte en la<br/><span class="text-primary-container">Zona.</span></h2>
+					<p class="font-body text-on-surface-variant text-lg mb-8 max-w-md">Nunca pierdas un espacio. Conecta tus alertas preferidas y obtén disponibilidad de canchas en tiempo real.</p>
+					<div class="flex flex-wrap gap-6">
+						<div class="flex items-center gap-4 bg-surface-container-high p-4 pr-8 rounded-lg border-l-4 border-[#25D366]">
+							<span class="material-symbols-outlined text-3xl text-[#25D366]">chat</span>
+							<div>
+								<span class="block text-[10px] font-label text-on-surface-variant uppercase tracking-widest">WhatsApp</span>
+								<span class="text-sm font-bold text-on-surface">Habilitar Alertas</span>
+							</div>
+						</div>
+						<div class="flex items-center gap-4 bg-surface-container-high p-4 pr-8 rounded-lg border-l-4 border-tertiary-container">
+							<span class="material-symbols-outlined text-3xl text-tertiary-container">mail</span>
+							<div>
+								<span class="block text-[10px] font-label text-on-surface-variant uppercase tracking-widest">Correo</span>
+								<span class="text-sm font-bold text-on-surface">Reseña Push</span>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="lg:col-span-4 bg-primary-container p-12 rounded-xl flex flex-col justify-between">
+					<div class="flex justify-between items-start">
+						<span class="material-symbols-outlined text-5xl text-on-primary-container">stars</span>
+						<span class="text-xs font-black uppercase tracking-widest text-on-primary-container">Saldo de Puntos</span>
+					</div>
+					<div>
+						<p id="wallet-points" class="text-on-primary-container font-headline text-4xl font-bold mb-2">—</p>
+						<p class="text-on-primary-container/60 text-xs font-label uppercase tracking-widest mb-6">Tus Puntos</p>
+						<a href="/premios" class="block w-full bg-on-primary-container text-primary-container py-4 rounded-lg font-black uppercase tracking-widest text-xs text-center">Canjear Recompensas</a>
+					</div>
+				</div>
+			</div>
+		</section>
+	</main>
+
+	<footer class="w-full flex flex-col items-center gap-6 border-t border-[#4f4632]/10 bg-[#1c1b1b] py-12 px-8">
+		<div class="w-full flex flex-col md:flex-row justify-between items-center gap-8 max-w-7xl">
+			<div class="flex flex-col items-center md:items-start gap-4">
+				<span class="text-lg font-bold text-[#e5e2e1] font-headline uppercase tracking-tight">RESERMAX</span>
+				<p class="text-xs text-[#d3c5ac] font-label text-center md:text-left">© 2024 RESERMAX. LA GALERÍA CINÉTICA.</p>
+			</div>
+			<div class="flex flex-wrap justify-center gap-8">
+				<a class="text-[#d3c5ac] hover:text-[#f7bb07] underline transition-all text-xs font-label uppercase tracking-widest" href="#">Política de Privacidad</a>
+				<a class="text-[#d3c5ac] hover:text-[#f7bb07] underline transition-all text-xs font-label uppercase tracking-widest" href="#">Términos</a>
+				<a class="text-[#d3c5ac] hover:text-[#f7bb07] underline transition-all text-xs font-label uppercase tracking-widest" href="#">Soporte</a>
+			</div>
+		</div>
+	</footer>
+
+	<!-- Mobile Nav -->
+	<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-3 pb-safe bg-[#131313]/95 backdrop-blur-xl border-t border-[#4f4632]/15">
+		<a class="flex flex-col items-center text-[#f7bb07]" href="/">
+			<span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">explore</span>
+			<span class="text-[10px] uppercase tracking-widest mt-1">Explorar</span>
+		</a>
+		<a class="flex flex-col items-center text-[#d3c5ac]/60" href="/perfil">
+			<span class="material-symbols-outlined">event_available</span>
+			<span class="text-[10px] uppercase tracking-widest mt-1">Reservas</span>
+		</a>
+		<a class="flex flex-col items-center text-[#d3c5ac]/60" href="/premios">
+			<span class="material-symbols-outlined">stars</span>
+			<span class="text-[10px] uppercase tracking-widest mt-1">Recompensas</span>
+		</a>
+		<a class="flex flex-col items-center text-[#d3c5ac]/60" href="/perfil">
+			<span class="material-symbols-outlined">person</span>
+			<span class="text-[10px] uppercase tracking-widest mt-1">Perfil</span>
+		</a>
+	</nav>
+
+	<script src="/static/scripts/index.js"></script>
+</body>
+</html>

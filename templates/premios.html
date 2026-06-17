@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>RESERMAX | Recompensas Cinéticas</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;900&family=Manrope:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link rel="stylesheet" href="/static/css/index.css">
+</head>
+<body class="bg-[#0a0a0a] text-[#e5e2e1] font-['Manrope'] selection:bg-[#f7bb07] selection:text-[#000000]">
+
+    <header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-6 py-4 bg-[#131313]/90 backdrop-blur-xl border-b border-white/5">
+        <div class="flex items-center gap-8">
+            <span class="text-2xl font-black tracking-tighter text-[#e5e2e1] font-['Space_Grotesk'] uppercase">RESERMAX</span>
+            <nav class="hidden md:flex items-center gap-6">
+                <a class="text-[#d3c5ac] hover:text-[#f7bb07] transition-colors font-['Space_Grotesk'] text-sm uppercase tracking-widest py-1" href="/">Explorar</a>
+                <a class="text-[#d3c5ac] hover:text-[#f7bb07] transition-colors font-['Space_Grotesk'] text-sm uppercase tracking-widest py-1" href="/perfil">Perfil</a>
+                <a class="text-[#f7bb07] font-bold border-b-2 border-[#f7bb07] font-['Space_Grotesk'] text-sm uppercase tracking-widest py-1" href="/premios">Recompensas</a>
+            </nav>
+        </div>
+        <div class="flex items-center gap-6">
+            <div class="flex flex-col items-end">
+                <span id="user-points-nav" class="text-[#f7bb07] font-['Space_Grotesk'] font-black text-lg leading-none">—</span>
+                <span class="text-[8px] font-black uppercase tracking-[0.2em] text-[#d3c5ac]">Saldo de Puntos</span>
+            </div>
+            <a href="/perfil" class="h-10 w-10 rounded-full bg-[#f7bb07] flex items-center justify-center font-black text-black text-sm" id="nav-avatar">?</a>
+        </div>
+    </header>
+
+    <main class="pt-32">
+        <!-- Hero -->
+        <section class="px-6 lg:px-24 mb-16 relative overflow-hidden">
+            <div class="absolute -top-24 -right-24 w-96 h-96 bg-[#f7bb07]/10 rounded-full blur-[120px]"></div>
+            <div class="max-w-4xl relative z-10">
+                <h1 class="font-['Space_Grotesk'] text-7xl md:text-9xl font-black tracking-tighter text-[#e5e2e1] leading-[0.85] mb-8 uppercase">
+                    RECOMPENSAS<br/><span class="text-[#f7bb07]">CINÉTICAS.</span>
+                </h1>
+                <p class="text-[#d3c5ac] text-xl max-w-xl font-medium leading-relaxed">
+                    Convierte tu rendimiento en equipo. Cada reserva te gana puntos para equipos exclusivos de RESERMAX.
+                </p>
+            </div>
+        </section>
+
+        <!-- Rewards Grid (dynamic) -->
+        <section id="rewards-grid" class="px-6 lg:px-24 pb-32">
+            <div class="flex items-center justify-center py-24">
+                <p class="text-[#d3c5ac] text-sm uppercase tracking-widest animate-pulse">Cargando recompensas...</p>
+            </div>
+        </section>
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="/static/scripts/premios.js"></script>
+</body>
+</html>
