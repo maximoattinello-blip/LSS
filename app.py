@@ -11,6 +11,50 @@ app.secret_key = 'resermax_dev_secret_key_replace_in_production'
 basedir = os.path.abspath(os.path.dirname(__file__))
 db_path = os.path.join(basedir, 'resermax.db')
 
+COURT_IMAGE_KEYS = {
+	'cancha_futbol_5',
+	'cancha_futbol_7',
+	'cancha_futbol_11',
+	'cancha_padel_indoor',
+	'cancha_padel_outdoor',
+	'cancha_tenis_arcilla',
+	'cancha_tenis_cesped',
+	'cancha_tenis_cemento',
+}
+
+COURT_IMAGE_URLS = {
+	key: f'/static/images/courts/{key}.jpg'
+	for key in COURT_IMAGE_KEYS
+}
+
+def infer_court_image_key(name, court_type):
+	"""Infer the most specific image key available for a court."""
+	text = f'{name or ""} {court_type or ""}'.lower()
+	if 'futbol' in text or 'football' in text or 'soccer' in text:
+		if '11' in text:
+			return 'cancha_futbol_11'
+		if '7' in text:
+			return 'cancha_futbol_7'
+		return 'cancha_futbol_5'
+	if 'padel' in text or 'paddle' in text:
+		if 'outdoor' in text or 'exterior' in text or 'aire libre' in text:
+			return 'cancha_padel_outdoor'
+		return 'cancha_padel_indoor'
+	if 'tenis' in text or 'tennis' in text:
+		if 'arcilla' in text or 'clay' in text:
+			return 'cancha_tenis_arcilla'
+		if 'cesped' in text or 'grass' in text:
+			return 'cancha_tenis_cesped'
+		return 'cancha_tenis_cemento'
+	return ''
+
+def court_to_dict(row):
+	court = dict(row)
+	image_key = court.get('image_key') or infer_court_image_key(court.get('name'), court.get('type'))
+	court['image_key'] = image_key
+	court['image_url'] = COURT_IMAGE_URLS.get(image_key, '')
+	return court
+
 # ==========================================
 # DATABASE HELPERS
 # ==========================================
@@ -36,6 +80,9 @@ def migrate_db():
 	# rewards: columnas nuevas para horas gratis
 	add_column_if_missing(c, 'rewards', 'is_free_hours', 'INTEGER DEFAULT 0')
 	add_column_if_missing(c, 'rewards', 'free_hours',    'INTEGER DEFAULT 0')
+
+	# courts: clave estable para imagen publica
+	add_column_if_missing(c, 'courts', 'image_key', 'TEXT')
 
 	# reservations: columna para reservas con horas gratis
 	add_column_if_missing(c, 'reservations', 'is_free_hours', 'INTEGER DEFAULT 0')
@@ -69,7 +116,8 @@ def init_db():
 		price REAL NOT NULL,
 		points_multiplier REAL DEFAULT 1.0,
 		available INTEGER DEFAULT 1,
-		status TEXT DEFAULT 'Operational'
+		status TEXT DEFAULT 'Operational',
+		image_key TEXT
 	)''')
 
 	c.execute('''CREATE TABLE IF NOT EXISTS reservations (
@@ -130,17 +178,6 @@ def init_db():
 	for a in admins:
 		c.execute('INSERT OR IGNORE INTO users (username, email, password, puesto, points) VALUES (?,?,?,?,0)', a)
 
-	# Seed courts
-	courts_seed = [
-		('Soccer Pitch A', 'Soccer Pitch', 45.0, 1.5, 1, 'Operational'),
-		('Soccer Pitch B', 'Soccer Pitch', 45.0, 1.5, 1, 'Operational'),
-		('Tennis Court 1', 'Tennis Court', 32.0, 1.2, 0, 'Maintenance'),
-		('Tennis Court 2', 'Tennis Court', 32.0, 1.2, 1, 'Operational'),
-		('Paddle Arena 1', 'Paddle Arena', 38.0, 1.3, 1, 'Operational'),
-	]
-	for ct in courts_seed:
-		c.execute('INSERT OR IGNORE INTO courts (name, type, price, points_multiplier, available, status) VALUES (?,?,?,?,?,?)', ct)
-
 	# Seed demo athlete
 	c.execute('INSERT OR IGNORE INTO users (username, email, password, puesto, points) VALUES (?,?,?,?,?)',
 			  ('Marcus Sterling', 'marcus@athlete.com', 'Marcus123', 'ATHLETE', 2450))
@@ -148,6 +185,52 @@ def init_db():
 	conn.commit()
 	conn.close()
 	print("Base de datos inicializada.")
+
+def sync_court_catalog():
+	"""Keeps the demo catalog aligned with the available court images."""
+	conn = get_db()
+	c = conn.cursor()
+
+	legacy_updates = [
+		('Cancha Futbol 5', 'Soccer Pitch', 45.0, 1.5, 1, 'Operational', 'cancha_futbol_5', 'Soccer Pitch A'),
+		('Cancha Futbol 7', 'Soccer Pitch', 45.0, 1.5, 1, 'Operational', 'cancha_futbol_7', 'Soccer Pitch B'),
+		('Cancha Tenis Arcilla', 'Tennis Court', 32.0, 1.2, 1, 'Operational', 'cancha_tenis_arcilla', 'Tennis Court 1'),
+		('Cancha Tenis Cemento', 'Tennis Court', 32.0, 1.2, 1, 'Operational', 'cancha_tenis_cemento', 'Tennis Court 2'),
+		('Cancha Padel Indoor', 'Paddle Arena', 38.0, 1.3, 1, 'Operational', 'cancha_padel_indoor', 'Paddle Arena 1'),
+	]
+	for name, court_type, price, multiplier, available, status, image_key, legacy_name in legacy_updates:
+		c.execute('''
+			UPDATE courts
+			SET name=?, type=?, price=?, points_multiplier=?, available=?, status=?, image_key=?
+			WHERE name=?
+		''', (name, court_type, price, multiplier, available, status, image_key, legacy_name))
+
+	court_defaults = [
+		('Cancha Futbol 5', 'Soccer Pitch', 45.0, 1.5, 1, 'Operational', 'cancha_futbol_5'),
+		('Cancha Futbol 7', 'Soccer Pitch', 55.0, 1.6, 1, 'Operational', 'cancha_futbol_7'),
+		('Cancha Futbol 11', 'Soccer Pitch', 75.0, 1.8, 1, 'Operational', 'cancha_futbol_11'),
+		('Cancha Padel Indoor', 'Paddle Arena', 38.0, 1.3, 1, 'Operational', 'cancha_padel_indoor'),
+		('Cancha Padel Outdoor', 'Paddle Arena', 34.0, 1.2, 1, 'Operational', 'cancha_padel_outdoor'),
+		('Cancha Tenis Arcilla', 'Tennis Court', 32.0, 1.2, 1, 'Operational', 'cancha_tenis_arcilla'),
+		('Cancha Tenis Cesped', 'Tennis Court', 36.0, 1.25, 1, 'Operational', 'cancha_tenis_cesped'),
+		('Cancha Tenis Cemento', 'Tennis Court', 30.0, 1.15, 1, 'Operational', 'cancha_tenis_cemento'),
+	]
+	for court in court_defaults:
+		exists = c.execute('SELECT id FROM courts WHERE image_key=?', (court[6],)).fetchone()
+		if not exists:
+			c.execute('''
+				INSERT INTO courts (name, type, price, points_multiplier, available, status, image_key)
+				VALUES (?,?,?,?,?,?,?)
+			''', court)
+
+	c.execute('SELECT id, name, type FROM courts WHERE image_key IS NULL OR image_key=""')
+	for court in c.fetchall():
+		image_key = infer_court_image_key(court['name'], court['type'])
+		if image_key:
+			c.execute('UPDATE courts SET image_key=? WHERE id=?', (image_key, court['id']))
+
+	conn.commit()
+	conn.close()
 
 def seed_rewards():
 	"""Inserta los premios base solo si la tabla está vacía."""
@@ -180,6 +263,7 @@ def seed_rewards():
 # Ejecutar en orden: primero crear tablas, luego migrar columnas, luego seed
 init_db()
 migrate_db()
+sync_court_catalog()
 seed_rewards()
 
 # ==========================================
@@ -303,7 +387,7 @@ def api_courts():
 		params.append(f'%{name_q}%')
 	courts = conn.execute(query, params).fetchall()
 	conn.close()
-	return jsonify([dict(c) for c in courts])
+	return jsonify([court_to_dict(c) for c in courts])
 
 @app.route('/api/courts/all')
 @admin_required
@@ -311,7 +395,7 @@ def api_courts_all():
 	conn = get_db()
 	courts = conn.execute('SELECT * FROM courts').fetchall()
 	conn.close()
-	return jsonify([dict(c) for c in courts])
+	return jsonify([court_to_dict(c) for c in courts])
 
 @app.route('/api/courts/<int:court_id>/slots')
 @login_required
@@ -624,10 +708,15 @@ def api_admin_stats():
 @admin_required
 def api_admin_add_court():
 	data = request.json or {}
+	name = data['name']
+	court_type = data['type']
+	image_key = data.get('image_key') or infer_court_image_key(name, court_type)
+	if image_key not in COURT_IMAGE_KEYS:
+		image_key = ''
 	conn = get_db()
 	conn.execute(
-		'INSERT INTO courts (name, type, price, points_multiplier, available, status) VALUES (?,?,?,?,?,?)',
-		(data['name'], data['type'], float(data['price']), float(data.get('multiplier', 1.0)), 1, 'Operational')
+		'INSERT INTO courts (name, type, price, points_multiplier, available, status, image_key) VALUES (?,?,?,?,?,?,?)',
+		(name, court_type, float(data['price']), float(data.get('multiplier', 1.0)), 1, 'Operational', image_key)
 	)
 	conn.commit()
 	conn.close()

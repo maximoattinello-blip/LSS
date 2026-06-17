@@ -233,6 +233,7 @@ document.getElementById('cancel-add-facility')?.addEventListener('click', () => 
 document.getElementById('confirm-add-facility')?.addEventListener('click', async () => {
 	const name = document.getElementById('new-court-name').value.trim();
 	const type = document.getElementById('new-court-type').value;
+	const imageKey = document.getElementById('new-court-image-key')?.value || '';
 	const price = parseFloat(document.getElementById('new-court-price').value);
 	const multiplier = parseFloat(document.getElementById('new-court-multiplier').value) || 1.0;
 	if (!name || !price) { showToast('Completá todos los campos', 'error'); return; }
@@ -240,11 +241,12 @@ document.getElementById('confirm-add-facility')?.addEventListener('click', async
 		const res = await fetch('/api/admin/court', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ name, type, price, multiplier })
+			body: JSON.stringify({ name, type, price, multiplier, image_key: imageKey })
 		});
 		const data = await res.json();
 		if (data.success) {
 			document.getElementById('add-facility-modal').style.display = 'none';
+			document.getElementById('new-court-image-key').value = '';
 			showToast('¡Instalación agregada!', 'success');
 			loadFacilities();
 		}

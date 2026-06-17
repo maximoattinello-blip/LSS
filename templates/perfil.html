@@ -125,6 +125,28 @@
         </div>
     </main>
 
+    <div id="cancel-confirm-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <div class="bg-[#131313] rounded-2xl p-8 w-full max-w-md border border-white/10 shadow-2xl">
+            <div class="flex items-start gap-4 mb-6">
+                <div class="h-12 w-12 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-red-400">warning</span>
+                </div>
+                <div>
+                    <h3 class="font-['Space_Grotesk'] text-xl font-black uppercase tracking-tighter mb-2">Cancelar Reserva</h3>
+                    <p class="text-[#d3c5ac] text-sm">Estas seguro que quieres cancelar la reserva?</p>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button id="confirm-cancel-reservation" class="py-3 rounded-xl bg-red-500 text-white font-black uppercase tracking-widest text-xs hover:bg-red-400 transition-all">
+                    Si, cancelar reserva
+                </button>
+                <button id="dismiss-cancel-reservation" class="py-3 rounded-xl border border-white/10 text-[#d3c5ac] font-black uppercase tracking-widest text-xs hover:bg-white/5 hover:text-white transition-all">
+                    No, cancelar proceso
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div id="toast" class="toast"></div>
 
     <script src="/static/scripts/perfil.js"></script>
