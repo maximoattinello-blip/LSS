@@ -6,6 +6,17 @@ const COURT_ICONS = {
 	'Paddle Arena': 'sports_handball',
 };
 
+const COURT_IMAGE_PATHS = {
+	cancha_futbol_5: '/static/images/courts/cancha_futbol_5.jpg',
+	cancha_futbol_7: '/static/images/courts/cancha_futbol_7.jpg',
+	cancha_futbol_11: '/static/images/courts/cancha_futbol_11.jpg',
+	cancha_padel_indoor: '/static/images/courts/cancha_padel_indoor.jpg',
+	cancha_padel_outdoor: '/static/images/courts/cancha_padel_outdoor.jpg',
+	cancha_tenis_arcilla: '/static/images/courts/cancha_tenis_arcilla.jpg',
+	cancha_tenis_cesped: '/static/images/courts/cancha_tenis_cesped.jpg',
+	cancha_tenis_cemento: '/static/images/courts/cancha_tenis_cemento.jpg',
+};
+
 let allCourts = [];
 let selectedCourt = null;
 let selectedHour = null;
@@ -64,10 +75,22 @@ function renderCourts(courts) {
 		grid.innerHTML = '<div class="col-span-full text-center py-16 text-[#d3c5ac] text-sm uppercase tracking-widest">No hay canchas disponibles.</div>';
 		return;
 	}
-	grid.innerHTML = courts.map(c => `
+	grid.innerHTML = courts.map(c => {
+		const imageUrl = c.image_url || COURT_IMAGE_PATHS[c.image_key] || '';
+		const icon = COURT_ICONS[c.type] || 'sports';
+		const media = imageUrl
+			? `<img src="${imageUrl}" alt="${c.name}" class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" loading="lazy" onerror="this.classList.add('hidden'); this.nextElementSibling.classList.remove('hidden');">
+				<div class="hidden flex absolute inset-0 items-center justify-center bg-gradient-to-br from-[#1a1a1a] to-[#0d0d0d]">
+					<span class="material-symbols-outlined text-7xl text-[#f7bb07]/25">${icon}</span>
+				</div>`
+			: `<div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#1a1a1a] to-[#0d0d0d]">
+					<span class="material-symbols-outlined text-7xl text-[#f7bb07]/25">${icon}</span>
+				</div>`;
+		return `
 		<div class="group bg-[#131313] rounded-3xl overflow-hidden border border-white/5 hover:border-[#f7bb07]/40 transition-all duration-500 flex flex-col">
-			<div class="h-48 bg-gradient-to-br from-[#1a1a1a] to-[#0d0d0d] flex items-center justify-center relative overflow-hidden">
-				<span class="material-symbols-outlined text-7xl text-[#f7bb07]/20 group-hover:text-[#f7bb07]/40 transition-all duration-500 group-hover:scale-110">${COURT_ICONS[c.type] || 'sports'}</span>
+			<div class="h-48 bg-gradient-to-br from-[#1a1a1a] to-[#0d0d0d] relative overflow-hidden">
+				${media}
+				<div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent"></div>
 				<div class="absolute top-4 right-4">
 					<span class="bg-green-500/10 text-green-500 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border border-green-500/20">Disponible</span>
 				</div>
@@ -92,7 +115,7 @@ function renderCourts(courts) {
 				</button>
 			</div>
 		</div>
-	`).join('');
+	`}).join('');
 
 	document.querySelectorAll('.book-btn').forEach(btn => {
 		btn.addEventListener('click', () => openBookingModal(parseInt(btn.dataset.courtId)));
