@@ -172,17 +172,53 @@ function openBookingModal(courtId, token = null, freeHours = 0) {
 	document.getElementById('booking-modal').style.display = 'flex';
 }
 
-function updateModalSummary() {
+async function updateModalSummary() {
 	if (!selectedCourt) return;
+	const dateVal = document.getElementById('modal-date').value;
+	
 	let multiplier = selectedCourt.points_multiplier;
 	if (selectedHour !== null) {
 		const h = selectedHour;
 		if ((h >= 8 && h < 11) || (h >= 13 && h < 16) || h >= 22) multiplier *= 2.5;
 	}
-	const pts = Math.round(selectedCourt.price * multiplier * selectedDuration);
+	
+	// Obtener el multiplicador de día especial para la fecha seleccionada
+	let dayMultiplier = 1.0;
+	if (dateVal) {
+		try {
+			const res = await fetch(`/api/point-multiplier?date=${dateVal}`);
+			const data = await res.json();
+			if (data.active) dayMultiplier = data.multiplier;
+		} catch (e) {}
+	}
+	
+	// Calcular puntos: base * day_multiplier
+	const basePoints = selectedCourt.price * multiplier * selectedDuration;
+	const pts = Math.round(basePoints * dayMultiplier);
 	const price = (selectedCourt.price * selectedDuration).toFixed(2);
+	
 	document.getElementById('modal-price').textContent = `$${price}`;
-	document.getElementById('modal-points').textContent = `${pts.toLocaleString()} pts`;
+	
+	// Update points display and styling based on multiplier
+	const pointsEl = document.getElementById('modal-points');
+	const pointsContainer = pointsEl.parentElement;
+	
+	// Mostrar multiplicador si aplica
+	if (dayMultiplier > 1) {
+		pointsEl.textContent = `${pts.toLocaleString()} pts (x${dayMultiplier.toFixed(1)})`;
+		// Highlight the box when there's a multiplier
+		pointsContainer.style.borderColor = '#f7bb07';
+		pointsContainer.style.borderWidth = '2px';
+		pointsContainer.style.backgroundColor = 'rgba(247, 187, 7, 0.25)';
+		pointsContainer.style.boxShadow = 'inset 0 0 20px rgba(247, 187, 7, 0.2)';
+	} else {
+		pointsEl.textContent = `${pts.toLocaleString()} pts`;
+		// Reset to normal styling
+		pointsContainer.style.borderColor = '';
+		pointsContainer.style.borderWidth = '';
+		pointsContainer.style.backgroundColor = '';
+		pointsContainer.style.boxShadow = '';
+	}
 }
 
 async function renderSlots(dateStr) {
@@ -250,7 +286,10 @@ document.getElementById('duration-selector')?.addEventListener('click', (e) => {
 
 // Fecha change
 document.getElementById('modal-date')?.addEventListener('change', (e) => {
-	if (e.target.value) renderSlots(e.target.value);
+	if (e.target.value) {
+		renderSlots(e.target.value);
+		if (!freeHoursToken) updateModalSummary();
+	}
 });
 
 document.getElementById('modal-close')?.addEventListener('click', () => {

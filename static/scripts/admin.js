@@ -229,20 +229,23 @@ async function loadDisabledDays() {
 document.getElementById('add-multiplier-btn')?.addEventListener('click', async () => {
 	const startDate = document.getElementById('multiplier-start-date').value;
 	const endDate = document.getElementById('multiplier-end-date').value || startDate;
+	const multiplier = parseFloat(document.getElementById('multiplier-value').value) || 2.0;
 	const reason = document.getElementById('multiplier-reason').value.trim();
 	const recurring = document.getElementById('multiplier-recurring')?.checked || false;
 	if (!startDate) { showToast('Selecciona una fecha de inicio', 'error'); return; }
+	if (multiplier < 1) { showToast('El multiplicador debe ser mayor a 1', 'error'); return; }
 	try {
 		const res = await fetch('/api/admin/point-multipliers', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ start_date: startDate, end_date: endDate, reason, recurring })
+			body: JSON.stringify({ start_date: startDate, end_date: endDate, multiplier, reason, recurring })
 		});
 		const data = await res.json();
 		if (data.success) {
 			showToast('Multiplicador x2 programado', 'success');
 			document.getElementById('multiplier-start-date').value = '';
 			document.getElementById('multiplier-end-date').value = '';
+			document.getElementById('multiplier-value').value = '';
 			document.getElementById('multiplier-reason').value = '';
 			document.getElementById('multiplier-recurring').checked = false;
 			loadPointMultipliers();
@@ -272,7 +275,7 @@ async function loadPointMultipliers() {
 						<span class="block text-sm font-bold">${rangeLabel}</span>
 						<div class="flex items-center gap-2 mt-1 flex-wrap">
 							<span class="text-[8px] bg-[#f7bb07]/10 text-[#f7bb07] border-[#f7bb07]/20 px-2 py-0.5 rounded border font-black uppercase tracking-widest">x${p.multiplier}</span>
-							${p.recurring ? '<span class="text-[8px] bg-white/10 text-[#d3c5ac] border-white/10 px-2 py-0.5 rounded border font-black uppercase tracking-widest">Todos los anos</span>' : ''}
+							${p.recurring ? '<span class="text-[8px] bg-white/10 text-[#d3c5ac] border-white/10 px-2 py-0.5 rounded border font-black uppercase tracking-widest">Todos los años</span>' : ''}
 							${p.reason ? `<span class="text-[10px] text-[#d3c5ac]">${p.reason}</span>` : ''}
 						</div>
 					</div>

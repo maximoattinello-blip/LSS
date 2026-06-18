@@ -599,10 +599,17 @@ def api_admin_add_point_multiplier():
 	data = request.json or {}
 	start_date = data.get('start_date', '').strip()
 	end_date = data.get('end_date', '').strip() or start_date
+	multiplier = data.get('multiplier', 2.0)
 	reason = data.get('reason', '').strip()
 	recurring = 1 if data.get('recurring') else 0
 	if not start_date:
 		return jsonify({'success': False, 'error': 'Falta la fecha de inicio'}), 400
+	try:
+		multiplier = float(multiplier)
+		if multiplier < 1:
+			return jsonify({'success': False, 'error': 'El multiplicador debe ser mayor a 1'}), 400
+	except (TypeError, ValueError):
+		return jsonify({'success': False, 'error': 'Multiplicador inválido'}), 400
 	try:
 		start_dt = datetime.fromisoformat(start_date).date()
 		end_dt = datetime.fromisoformat(end_date).date()
@@ -623,7 +630,7 @@ def api_admin_add_point_multiplier():
 	conn.execute('''
 		INSERT INTO point_multiplier_periods (start_date, end_date, multiplier, reason, active, recurring, created_by)
 		VALUES (?,?,?,?,1,?,?)
-	''', (start_dt.isoformat(), end_dt.isoformat(), ADMIN_POINTS_MULTIPLIER, reason, recurring, session['user_id']))
+	''', (start_dt.isoformat(), end_dt.isoformat(), multiplier, reason, recurring, session['user_id']))
 	conn.commit()
 	conn.close()
 	return jsonify({'success': True})
@@ -725,7 +732,7 @@ def api_reserve():
 		points_earned = 0
 		paid          = 0
 	else:
-		# Calcular puntos con bonus de día de baja demanda
+		# Calcular puntos base con multiplicadores normales
 		multiplier = court['points_multiplier']
 
 		# Bonus por horario pico (horas de menor afluencia en el día)
@@ -737,10 +744,13 @@ def api_reserve():
 		if is_low_demand_day(start_dt):
 			multiplier *= LOW_DEMAND_BONUS
 
+		# Calcular puntos base
+		base_points = court['price'] * multiplier * duration_hours
+		
+		# Verificar si hay un multiplicador de día especial y aplicarlo al resultado final
 		points_multiplier_applied = get_active_points_multiplier(conn, date_str)
-		multiplier *= points_multiplier_applied
-
-		points_earned = int(court['price'] * multiplier * duration_hours)
+		points_earned = int(base_points * points_multiplier_applied)
+		
 		paid          = 1
 		conn.execute('UPDATE users SET points = points + ? WHERE id=?', (points_earned, session['user_id']))
 
