@@ -105,10 +105,10 @@ function renderCourts(courts) {
 						<span class="text-2xl font-black text-[#f7bb07]">$${c.price.toFixed(2)}</span>
 						<span class="text-[10px] text-[#d3c5ac] uppercase tracking-widest ml-1">/ hr</span>
 					</div>
-					<div class="text-right">
+					${c.has_special_day ? `<div class="text-right">
 						<span class="text-[10px] text-[#d3c5ac] uppercase tracking-widest block">Pts Mult.</span>
-						<span class="font-black text-[#f7bb07]">${c.points_multiplier}x</span>
-					</div>
+						<span class="font-black text-[#f7bb07]">x${c.day_multiplier.toFixed(1)}</span>
+					</div>` : ''}
 				</div>
 				<button data-court-id="${c.id}" class="book-btn w-full bg-[#f7bb07] text-black py-3 rounded-xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-95 transition-all">
 					Reservar Ahora
@@ -292,9 +292,10 @@ document.getElementById('modal-confirm')?.addEventListener('click', async () => 
 		if (res.status === 401) { window.location.href = '/login'; return; }
 		if (data.success) {
 			document.getElementById('booking-modal').style.display = 'none';
+			const multiplierLabel = data.points_multiplier_applied > 1 ? ` x${data.points_multiplier_applied}` : '';
 			const msg = freeHoursToken
 				? '¡Reserva gratuita confirmada!'
-				: `¡Reservado! +${data.points_earned} pts`;
+				: `¡Reservado! +${data.points_earned} pts${multiplierLabel}`;
 			showToast(msg, 'success');
 			freeHoursToken = null;
 			loadUserPoints();

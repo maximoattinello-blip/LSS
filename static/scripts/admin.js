@@ -8,7 +8,7 @@ function showToast(msg, type = '') {
 }
 
 // ── Navegación entre secciones ──
-const sections = ['dashboard', 'facilities', 'calendar'];
+const sections = ['dashboard', 'facilities', 'calendar', 'multipliers'];
 
 function showSection(name) {
 	sections.forEach(s => {
@@ -25,6 +25,7 @@ function showSection(name) {
 	if (name === 'dashboard') { loadStats(); loadBookings(); loadFacilitiesDashboard(); }
 	if (name === 'facilities') loadFacilities();
 	if (name === 'calendar') loadDisabledDays();
+	if (name === 'multipliers') loadPointMultipliers();
 }
 
 document.querySelectorAll('.nav-link').forEach(link => {
@@ -118,10 +119,10 @@ async function loadFacilities() {
 					</div>
 				</div>
 				<div class="flex items-center gap-3">
-					<div class="text-right">
-						<span class="text-[10px] font-black text-[#f7bb07]">${c.points_multiplier}x</span>
-						<span class="block text-[8px] text-[#d3c5ac] uppercase tracking-widest">Multiplicador</span>
-					</div>
+					${c.has_special_day ? `<div class="text-right">
+						<span class="text-[10px] font-black text-[#f7bb07]">x${c.day_multiplier.toFixed(1)}</span>
+						<span class="block text-[8px] text-[#d3c5ac] uppercase tracking-widest">Día Especial</span>
+					</div>` : ''}
 					<button data-court-id="${c.id}" class="toggle-court-btn p-1.5 rounded-lg ${c.available ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20' : 'bg-green-500/10 text-green-400 hover:bg-green-500/20'} transition-all">
 						<span class="material-symbols-outlined text-sm">${c.available ? 'pause_circle' : 'play_circle'}</span>
 					</button>
@@ -224,6 +225,76 @@ async function loadDisabledDays() {
 }
 
 // ── Add Facility Modal ──
+// Multiplicadores de puntos
+document.getElementById('add-multiplier-btn')?.addEventListener('click', async () => {
+	const startDate = document.getElementById('multiplier-start-date').value;
+	const endDate = document.getElementById('multiplier-end-date').value || startDate;
+	const reason = document.getElementById('multiplier-reason').value.trim();
+	const recurring = document.getElementById('multiplier-recurring')?.checked || false;
+	if (!startDate) { showToast('Selecciona una fecha de inicio', 'error'); return; }
+	try {
+		const res = await fetch('/api/admin/point-multipliers', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ start_date: startDate, end_date: endDate, reason, recurring })
+		});
+		const data = await res.json();
+		if (data.success) {
+			showToast('Multiplicador x2 programado', 'success');
+			document.getElementById('multiplier-start-date').value = '';
+			document.getElementById('multiplier-end-date').value = '';
+			document.getElementById('multiplier-reason').value = '';
+			document.getElementById('multiplier-recurring').checked = false;
+			loadPointMultipliers();
+		} else {
+			showToast(data.error || 'Error al programar', 'error');
+		}
+	} catch(e) { showToast('Error de red', 'error'); }
+});
+
+async function loadPointMultipliers() {
+	try {
+		const res = await fetch('/api/admin/point-multipliers');
+		const periods = await res.json();
+		const list = document.getElementById('multipliers-list');
+		if (!periods.length) {
+			list.innerHTML = '<p class="text-[#d3c5ac] text-xs uppercase tracking-widest text-center py-8">No hay multiplicadores programados.</p>';
+			return;
+		}
+		list.innerHTML = periods.map(p => {
+			const sameDay = p.start_date === p.end_date;
+			const rangeLabel = sameDay ? p.start_date : `${p.start_date} al ${p.end_date}`;
+			return `
+			<div class="flex items-center justify-between gap-4 p-4 bg-white/5 rounded-2xl border border-white/5">
+				<div class="flex items-center gap-3 min-w-0">
+					<span class="material-symbols-outlined text-[#f7bb07]">offline_bolt</span>
+					<div>
+						<span class="block text-sm font-bold">${rangeLabel}</span>
+						<div class="flex items-center gap-2 mt-1 flex-wrap">
+							<span class="text-[8px] bg-[#f7bb07]/10 text-[#f7bb07] border-[#f7bb07]/20 px-2 py-0.5 rounded border font-black uppercase tracking-widest">x${p.multiplier}</span>
+							${p.recurring ? '<span class="text-[8px] bg-white/10 text-[#d3c5ac] border-white/10 px-2 py-0.5 rounded border font-black uppercase tracking-widest">Todos los anos</span>' : ''}
+							${p.reason ? `<span class="text-[10px] text-[#d3c5ac]">${p.reason}</span>` : ''}
+						</div>
+					</div>
+				</div>
+				<button data-id="${p.id}" class="delete-multiplier-btn p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all">
+					<span class="material-symbols-outlined text-sm">delete</span>
+				</button>
+			</div>`;
+		}).join('');
+
+		document.querySelectorAll('.delete-multiplier-btn').forEach(btn => {
+			btn.addEventListener('click', async () => {
+				try {
+					const res = await fetch(`/api/admin/point-multipliers/${btn.dataset.id}`, { method: 'DELETE' });
+					const data = await res.json();
+					if (data.success) { showToast('Multiplicador eliminado', 'success'); loadPointMultipliers(); }
+				} catch(e) {}
+			});
+		});
+	} catch(e) {}
+}
+
 document.getElementById('add-facility-btn')?.addEventListener('click', () => {
 	document.getElementById('add-facility-modal').style.display = 'flex';
 });

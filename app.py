@@ -83,6 +83,7 @@ def migrate_db():
 
 	# courts: clave estable para imagen publica
 	add_column_if_missing(c, 'courts', 'image_key', 'TEXT')
+	add_column_if_missing(c, 'point_multiplier_periods', 'recurring', 'INTEGER DEFAULT 0')
 
 	# reservations: columna para reservas con horas gratis
 	add_column_if_missing(c, 'reservations', 'is_free_hours', 'INTEGER DEFAULT 0')
@@ -164,6 +165,18 @@ def init_db():
 		date TEXT NOT NULL,
 		recurring INTEGER DEFAULT 0,
 		reason TEXT,
+		created_by INTEGER,
+		created_at TEXT DEFAULT (datetime('now'))
+	)''')
+
+	c.execute('''CREATE TABLE IF NOT EXISTS point_multiplier_periods (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		start_date TEXT NOT NULL,
+		end_date TEXT NOT NULL,
+		multiplier REAL NOT NULL DEFAULT 2.0,
+		reason TEXT,
+		active INTEGER DEFAULT 1,
+		recurring INTEGER DEFAULT 0,
 		created_by INTEGER,
 		created_at TEXT DEFAULT (datetime('now'))
 	)''')
@@ -271,10 +284,29 @@ seed_rewards()
 # 0=Lunes, 1=Martes, 2=Miércoles, 3=Jueves, 4=Viernes, 5=Sábado, 6=Domingo
 LOW_DEMAND_DAYS = [0, 1]  # Lunes y Martes
 LOW_DEMAND_BONUS = 1.5    # Multiplicador extra (+50%)
+ADMIN_POINTS_MULTIPLIER = 2.0
 
 def is_low_demand_day(dt):
 	"""Devuelve True si la fecha cae en un día de baja demanda."""
 	return dt.weekday() in LOW_DEMAND_DAYS
+
+def get_active_points_multiplier(conn, date_str):
+	month_day = date_str[5:]
+	rows = conn.execute('''
+		SELECT * FROM point_multiplier_periods
+		WHERE active=1
+		ORDER BY multiplier DESC, created_at DESC
+	''').fetchall()
+	for row in rows:
+		if row['recurring']:
+			start_md = row['start_date'][5:]
+			end_md = row['end_date'][5:]
+			in_range = start_md <= month_day <= end_md if start_md <= end_md else month_day >= start_md or month_day <= end_md
+		else:
+			in_range = row['start_date'] <= date_str <= row['end_date']
+		if in_range:
+			return float(row['multiplier'])
+	return 1.0
 
 def get_low_demand_info():
 	"""Devuelve info sobre los días de baja demanda para el frontend."""
@@ -406,16 +438,34 @@ def api_courts():
 		query += ' AND name LIKE ?'
 		params.append(f'%{name_q}%')
 	courts = conn.execute(query, params).fetchall()
+	
+	# Obtener multiplicador de día especial hoy
+	today = datetime.now().date().isoformat()
+	day_multiplier = get_active_points_multiplier(conn, today)
+	
 	conn.close()
-	return jsonify([court_to_dict(c) for c in courts])
+	result = [court_to_dict(c) for c in courts]
+	for court in result:
+		court['has_special_day'] = day_multiplier > 1.0
+		court['day_multiplier'] = day_multiplier
+	return jsonify(result)
 
 @app.route('/api/courts/all')
 @admin_required
 def api_courts_all():
 	conn = get_db()
 	courts = conn.execute('SELECT * FROM courts').fetchall()
+	
+	# Obtener multiplicador de día especial hoy
+	today = datetime.now().date().isoformat()
+	day_multiplier = get_active_points_multiplier(conn, today)
+	
 	conn.close()
-	return jsonify([court_to_dict(c) for c in courts])
+	result = [court_to_dict(c) for c in courts]
+	for court in result:
+		court['has_special_day'] = day_multiplier > 1.0
+		court['day_multiplier'] = day_multiplier
+	return jsonify(result)
 
 @app.route('/api/courts/<int:court_id>/slots')
 @login_required
@@ -446,6 +496,21 @@ def api_court_slots(court_id):
 def api_low_demand_days():
 	"""Devuelve qué días de la semana son de baja demanda y el bonus de puntos."""
 	return jsonify(get_low_demand_info())
+
+@app.route('/api/point-multiplier')
+def api_point_multiplier():
+	date_str = request.args.get('date', '').strip() or datetime.now().date().isoformat()
+	try:
+		normalized_date = datetime.fromisoformat(date_str).date().isoformat()
+	except (TypeError, ValueError):
+		return jsonify({'active': False, 'multiplier': 1.0}), 400
+	conn = get_db()
+	multiplier = get_active_points_multiplier(conn, normalized_date)
+	conn.close()
+	return jsonify({
+		'active': multiplier > 1,
+		'multiplier': multiplier
+	})
 
 @app.route('/api/reservations')
 @login_required
@@ -517,6 +582,61 @@ def api_delete_disabled_day(day_id):
 	conn.close()
 	return jsonify({'success': True})
 
+@app.route('/api/admin/point-multipliers')
+@admin_required
+def api_admin_point_multipliers():
+	conn = get_db()
+	rows = conn.execute('''
+		SELECT * FROM point_multiplier_periods
+		ORDER BY start_date ASC, end_date ASC
+	''').fetchall()
+	conn.close()
+	return jsonify([dict(r) for r in rows])
+
+@app.route('/api/admin/point-multipliers', methods=['POST'])
+@admin_required
+def api_admin_add_point_multiplier():
+	data = request.json or {}
+	start_date = data.get('start_date', '').strip()
+	end_date = data.get('end_date', '').strip() or start_date
+	reason = data.get('reason', '').strip()
+	recurring = 1 if data.get('recurring') else 0
+	if not start_date:
+		return jsonify({'success': False, 'error': 'Falta la fecha de inicio'}), 400
+	try:
+		start_dt = datetime.fromisoformat(start_date).date()
+		end_dt = datetime.fromisoformat(end_date).date()
+	except (TypeError, ValueError):
+		return jsonify({'success': False, 'error': 'Formato de fecha invalido'}), 400
+	if end_dt < start_dt:
+		return jsonify({'success': False, 'error': 'La fecha final no puede ser anterior a la inicial'}), 400
+
+	conn = get_db()
+	if not recurring:
+		overlap = conn.execute('''
+			SELECT id FROM point_multiplier_periods
+			WHERE active=1 AND recurring=0 AND start_date<=? AND end_date>=?
+		''', (end_dt.isoformat(), start_dt.isoformat())).fetchone()
+		if overlap:
+			conn.close()
+			return jsonify({'success': False, 'error': 'Ya existe un multiplicador activo en ese rango'}), 409
+	conn.execute('''
+		INSERT INTO point_multiplier_periods (start_date, end_date, multiplier, reason, active, recurring, created_by)
+		VALUES (?,?,?,?,1,?,?)
+	''', (start_dt.isoformat(), end_dt.isoformat(), ADMIN_POINTS_MULTIPLIER, reason, recurring, session['user_id']))
+	conn.commit()
+	conn.close()
+	return jsonify({'success': True})
+
+@app.route('/api/admin/point-multipliers/<int:period_id>', methods=['DELETE'])
+@admin_required
+def api_admin_delete_point_multiplier(period_id):
+	conn = get_db()
+	conn.execute('DELETE FROM point_multiplier_periods WHERE id=?', (period_id,))
+	conn.commit()
+	conn.close()
+	return jsonify({'success': True})
+
 @app.route('/api/reserve', methods=['POST'])
 @login_required
 def api_reserve():
@@ -582,6 +702,7 @@ def api_reserve():
 		return jsonify({'success': False, 'error': 'Horario ya reservado'}), 409
 
 	# Lógica de puntos / horas gratis
+	points_multiplier_applied = 1.0
 	if is_free and redemption_token:
 		redemption = conn.execute('''
 			SELECT rd.*, rw.is_free_hours, rw.free_hours
@@ -616,6 +737,9 @@ def api_reserve():
 		if is_low_demand_day(start_dt):
 			multiplier *= LOW_DEMAND_BONUS
 
+		points_multiplier_applied = get_active_points_multiplier(conn, date_str)
+		multiplier *= points_multiplier_applied
+
 		points_earned = int(court['price'] * multiplier * duration_hours)
 		paid          = 1
 		conn.execute('UPDATE users SET points = points + ? WHERE id=?', (points_earned, session['user_id']))
@@ -628,7 +752,11 @@ def api_reserve():
 		  'confirmed', paid, points_earned, 1 if is_free else 0))
 	conn.commit()
 	conn.close()
-	return jsonify({'success': True, 'points_earned': points_earned})
+	return jsonify({
+		'success': True,
+		'points_earned': points_earned,
+		'points_multiplier_applied': points_multiplier_applied
+	})
 
 @app.route('/api/cancel/<int:res_id>', methods=['POST'])
 @login_required

@@ -29,8 +29,16 @@
 				<span class="material-symbols-outlined">event_busy</span>
 				<span class="hidden lg:block font-bold text-xs uppercase tracking-widest">Días Inhabilitados</span>
 			</a>
+			<a href="#" id="nav-multipliers" data-section="multipliers" class="nav-link flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 text-[#d3c5ac] hover:text-white transition-all">
+				<span class="material-symbols-outlined">offline_bolt</span>
+				<span class="hidden lg:block font-bold text-xs uppercase tracking-widest">Puntos x2</span>
+			</a>
 		</nav>
 		<div class="px-4 mt-auto">
+			<a href="/" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 text-[#d3c5ac] hover:text-white transition-all mb-2">
+				<span class="material-symbols-outlined">storefront</span>
+				<span class="hidden lg:block font-bold text-xs uppercase tracking-widest">Vista Usuario</span>
+			</a>
 			<a href="/logout" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-red-500/10 text-red-500 transition-all">
 				<span class="material-symbols-outlined">logout</span>
 				<span class="hidden lg:block font-bold text-xs uppercase tracking-widest">Salir Admin</span>
@@ -174,6 +182,49 @@
 				<div class="bg-[#131313] rounded-3xl p-8 border border-white/5">
 					<h3 class="font-['Space_Grotesk'] text-xl font-black uppercase tracking-tighter mb-6">Fechas Bloqueadas</h3>
 					<div id="disabled-days-list" class="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+						<p class="text-[#d3c5ac] text-xs uppercase tracking-widest animate-pulse">Cargando...</p>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<section id="section-multipliers" class="hidden">
+			<header class="mb-12">
+				<h1 class="font-['Space_Grotesk'] text-4xl font-black tracking-tighter uppercase">Multiplicador de Puntos</h1>
+				<p class="text-[#d3c5ac] text-xs uppercase tracking-widest mt-1">Programacion manual de dias con puntos x2</p>
+			</header>
+
+			<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+				<div class="bg-[#131313] rounded-3xl p-8 border border-white/5">
+					<h3 class="font-['Space_Grotesk'] text-xl font-black uppercase tracking-tighter mb-6">Activar Puntos x2</h3>
+					<div class="space-y-5">
+						<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+							<div>
+								<label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2">Desde</label>
+								<input id="multiplier-start-date" type="date" class="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm outline-none focus:border-[#f7bb07]"/>
+							</div>
+							<div>
+								<label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2">Hasta</label>
+								<input id="multiplier-end-date" type="date" class="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm outline-none focus:border-[#f7bb07]"/>
+							</div>
+						</div>
+						<div>
+							<label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2">Motivo (opcional)</label>
+							<input id="multiplier-reason" type="text" placeholder="Ej: Evento especial, campania, baja demanda..." class="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm outline-none focus:border-[#f7bb07]"/>
+						</div>
+						<label class="flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3 cursor-pointer">
+							<input id="multiplier-recurring" type="checkbox" class="rounded border-white/20 bg-black/20 text-[#f7bb07] focus:ring-[#f7bb07]"/>
+							<span class="text-xs font-black uppercase tracking-widest text-[#d3c5ac]">Repetir todos los aÃ±os</span>
+						</label>
+						<button id="add-multiplier-btn" class="w-full py-4 rounded-xl bg-[#f7bb07] text-black font-black uppercase tracking-widest text-xs hover:scale-[1.02] transition-all">
+							Programar x2
+						</button>
+					</div>
+				</div>
+
+				<div class="bg-[#131313] rounded-3xl p-8 border border-white/5">
+					<h3 class="font-['Space_Grotesk'] text-xl font-black uppercase tracking-tighter mb-6">Periodos Programados</h3>
+					<div id="multipliers-list" class="space-y-3 max-h-[500px] overflow-y-auto pr-1">
 						<p class="text-[#d3c5ac] text-xs uppercase tracking-widest animate-pulse">Cargando...</p>
 					</div>
 				</div>

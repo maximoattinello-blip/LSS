@@ -18,6 +18,9 @@
                 <a class="text-[#d3c5ac] hover:text-[#f7bb07] transition-colors font-['Space_Grotesk'] text-sm uppercase tracking-widest py-1" href="/">Explorar</a>
                 <a class="text-[#d3c5ac] hover:text-[#f7bb07] transition-colors font-['Space_Grotesk'] text-sm uppercase tracking-widest py-1" href="/perfil">Perfil</a>
                 <a class="text-[#f7bb07] font-bold border-b-2 border-[#f7bb07] font-['Space_Grotesk'] text-sm uppercase tracking-widest py-1" href="/premios">Recompensas</a>
+                {% if session.get('puesto') == 'ADM' %}
+                <a class="text-[#d3c5ac] hover:text-[#ffdc94] transition-colors font-['Space_Grotesk'] text-sm uppercase tracking-widest py-1" href="/admin">Admin</a>
+                {% endif %}
             </nav>
         </div>
         <div class="flex items-center gap-6">
