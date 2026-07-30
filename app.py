@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from functools import wraps
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
-app.secret_key = 'resermax_dev_secret_key_replace_in_production'
+app.secret_key = os.environ.get('SECRET_KEY', 'resermax_dev_secret_key_replace_in_production')
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 db_path = os.path.join(basedir, 'resermax.db')
@@ -924,4 +924,5 @@ def api_admin_toggle_court(court_id):
 	return jsonify({'success': True})
 
 if __name__ == '__main__':
-	app.run(host='127.0.0.1', port=5000, debug=True)
+	port = int(os.environ.get('PORT', 5000))
+	app.run(host='0.0.0.0', port=port, debug=False)
