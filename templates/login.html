@@ -19,12 +19,18 @@
         <div class="flex flex-col items-center mb-12">
             <span class="text-4xl font-black tracking-tighter font-['Space_Grotesk'] uppercase mb-4 text-[#f7bb07]">RESERMAX</span>
             <h1 class="font-['Space_Grotesk'] text-3xl font-black tracking-tighter uppercase text-center">
-                {% if show_register %}Crear Perfil{% else %}Portal de Atleta{% endif %}
+                {% if show_register %}Crear Perfil{% elif show_forgot %}Recuperar Clave{% elif show_verify_code %}Validar Codigo{% elif show_reset_password %}Nueva Clave{% else %}Portal de Atleta{% endif %}
             </h1>
             <p class="text-[#d3c5ac] text-xs uppercase tracking-widest mt-2">
                 {% if show_register %}Unirse a la Zona Cinética{% else %}Ingresa a la Zona Cinética{% endif %}
             </p>
         </div>
+
+        {% if success %}
+        <div class="mb-6 bg-green-500/10 border border-green-500/30 text-green-400 px-6 py-4 rounded-xl text-xs font-bold uppercase tracking-widest text-center">
+            {{ success }}
+        </div>
+        {% endif %}
 
         {% if error %}
         <div class="mb-6 bg-red-500/10 border border-red-500/30 text-red-400 px-6 py-4 rounded-xl text-xs font-bold uppercase tracking-widest text-center">
@@ -33,7 +39,67 @@
         {% endif %}
 
         <div class="bg-[#131313] p-8 rounded-3xl border border-white/5 shadow-2xl">
-            {% if show_register %}
+            {% if show_forgot %}
+            <form method="POST" action="/forgot-password" class="space-y-5">
+                <div>
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2 ml-1">Correo de tu cuenta</label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#d3c5ac] text-lg">mail</span>
+                        <input name="email" class="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm focus:border-[#f7bb07] focus:ring-1 focus:ring-[#f7bb07] transition-all outline-none" placeholder="atleta@resermax.com" type="email" required/>
+                    </div>
+                </div>
+                <button class="w-full bg-[#f7bb07] text-black py-4 rounded-xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-[#f7bb07]/10" type="submit">
+                    Enviar Codigo
+                </button>
+            </form>
+            <div class="mt-8 pt-8 border-t border-white/5">
+                <a href="/login" class="block w-full py-4 rounded-xl border border-white/10 font-black uppercase tracking-widest text-xs hover:bg-white/5 transition-all text-center">
+                    Volver al Login
+                </a>
+            </div>
+
+            {% elif show_verify_code %}
+            <form method="POST" action="/verify-reset-code" class="space-y-5">
+                <input type="hidden" name="email" value="{{ reset_email or '' }}"/>
+                <div>
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2 ml-1">Codigo de Recuperacion</label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#d3c5ac] text-lg">pin</span>
+                        <input name="code" maxlength="6" inputmode="numeric" class="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm focus:border-[#f7bb07] focus:ring-1 focus:ring-[#f7bb07] transition-all outline-none tracking-[0.4em]" placeholder="000000" type="text" required/>
+                    </div>
+                </div>
+                <button class="w-full bg-[#f7bb07] text-black py-4 rounded-xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-[#f7bb07]/10" type="submit">
+                    Validar Codigo
+                </button>
+            </form>
+            <div class="mt-8 pt-8 border-t border-white/5">
+                <a href="/forgot-password" class="block w-full py-4 rounded-xl border border-white/10 font-black uppercase tracking-widest text-xs hover:bg-white/5 transition-all text-center">
+                    Pedir Otro Codigo
+                </a>
+            </div>
+
+            {% elif show_reset_password %}
+            <form method="POST" action="/reset-password" class="space-y-5">
+                <div>
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2 ml-1">Nueva Clave</label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#d3c5ac] text-lg">lock_reset</span>
+                        <input name="password" class="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm focus:border-[#f7bb07] focus:ring-1 focus:ring-[#f7bb07] transition-all outline-none" placeholder="Nueva clave" type="password" minlength="6" required/>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2 ml-1">Confirmar Nueva Clave</label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#d3c5ac] text-lg">verified_user</span>
+                        <input name="confirm_password" class="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm focus:border-[#f7bb07] focus:ring-1 focus:ring-[#f7bb07] transition-all outline-none" placeholder="Repetir clave" type="password" minlength="6" required/>
+                    </div>
+                </div>
+                <button class="w-full bg-[#f7bb07] text-black py-4 rounded-xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-[#f7bb07]/10" type="submit">
+                    Cambiar Clave
+                </button>
+            </form>
+
+            {% elif show_register %}
             <!-- REGISTER FORM -->
             <form method="POST" action="/register" class="space-y-5">
                 <div>
@@ -86,7 +152,7 @@
                     </div>
                 </div>
                 <div class="flex items-center justify-end px-1">
-                    <a class="text-[10px] font-bold uppercase tracking-widest text-[#f7bb07] hover:underline" href="#">Olvidaste la Clave?</a>
+                    <a class="text-[10px] font-bold uppercase tracking-widest text-[#f7bb07] hover:underline" href="/forgot-password">Olvidaste la Clave?</a>
                 </div>
                 <button class="w-full bg-[#f7bb07] text-black py-4 rounded-xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-[#f7bb07]/10" type="submit">
                     Autorizar Acceso

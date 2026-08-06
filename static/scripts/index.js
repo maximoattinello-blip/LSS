@@ -51,6 +51,34 @@ function isDayDisabled(dateStr) {
 	);
 }
 
+function getLocalDateString(date = new Date()) {
+	const y = date.getFullYear();
+	const m = String(date.getMonth() + 1).padStart(2, '0');
+	const d = String(date.getDate()).padStart(2, '0');
+	return `${y}-${m}-${d}`;
+}
+
+function getLocalDateTimeInputValue(date = new Date()) {
+	const y = date.getFullYear();
+	const m = String(date.getMonth() + 1).padStart(2, '0');
+	const d = String(date.getDate()).padStart(2, '0');
+	const hh = String(date.getHours()).padStart(2, '0');
+	const mm = String(date.getMinutes()).padStart(2, '0');
+	return `${y}-${m}-${d}T${hh}:${mm}`;
+}
+
+function createLocalDate(dateStr, hour) {
+	const [y, m, d] = dateStr.split('-').map(Number);
+	return new Date(y, m - 1, d, hour, 0, 0);
+}
+
+function getSameDayCutoff(dateStr, bufferMinutes = 30) {
+	if (dateStr !== getLocalDateString()) return null;
+	const now = new Date();
+	const cutoff = new Date(now.getTime() + bufferMinutes * 60 * 1000);
+	return cutoff;
+}
+
 // ── Fetch & Render Courts ──
 async function loadCourts(filter = '', nameQ = '') {
 	const grid = document.getElementById('courts-grid');
@@ -99,7 +127,11 @@ function renderCourts(courts) {
 				</div>
 			</div>
 			<div class="p-6 flex flex-col flex-1">
-				<h3 class="font-['Space_Grotesk'] text-xl font-black tracking-tighter uppercase mb-2">${c.name}</h3>
+				<h3 class="font-['Space_Grotesk'] text-xl font-black tracking-tighter uppercase mb-1">${c.name}</h3>
+				<div class="flex items-center justify-between mb-6">
+					<div class="flex items-center gap-2">${renderStars(c.rating_avg, c.rating_count)}</div>
+					<button data-court-id="${c.id}" class="reviews-btn text-[9px] font-black uppercase tracking-widest text-[#d3c5ac] hover:text-[#f7bb07] border-b border-white/10 hover:border-[#f7bb07] transition-all pb-0.5">Ver Reseñas</button>
+				</div>
 				<div class="flex items-center justify-between mb-6 mt-auto pt-4">
 					<div>
 						<span class="text-2xl font-black text-[#f7bb07]">$${c.price.toFixed(2)}</span>
@@ -120,7 +152,67 @@ function renderCourts(courts) {
 	document.querySelectorAll('.book-btn').forEach(btn => {
 		btn.addEventListener('click', () => openBookingModal(parseInt(btn.dataset.courtId)));
 	});
+	document.querySelectorAll('.reviews-btn').forEach(btn => {
+		btn.addEventListener('click', () => openReviewsModal(parseInt(btn.dataset.courtId)));
+	});
 }
+
+function renderStars(avg, count) {
+	if (!count) return '<span class="text-[10px] text-[#d3c5ac]/60">Sin reseñas aún</span>';
+	const rounded = Math.round(avg);
+	const filled  = '★'.repeat(rounded);
+	const empty   = '☆'.repeat(5 - rounded);
+	return `<span class="text-[#f7bb07] text-xs tracking-wider">${filled}</span><span class="text-[#4f4632] text-xs tracking-wider">${empty}</span><span class="text-[10px] text-[#d3c5ac]">${avg.toFixed(1)} (${count})</span>`;
+}
+
+// ── Reviews Modal ──
+let reviewsCourtId = null;
+
+function openReviewsModal(courtId) {
+	const court = allCourts.find(c => c.id === courtId);
+	if (!court) return;
+	reviewsCourtId = courtId;
+	document.getElementById('reviews-modal-court-name').textContent = court.name;
+	document.getElementById('reviews-modal').style.display = 'flex';
+	loadCourtReviews(courtId);
+}
+
+function closeReviewsModal() {
+	document.getElementById('reviews-modal').style.display = 'none';
+}
+
+async function loadCourtReviews(courtId) {
+	const list = document.getElementById('reviews-list');
+	list.innerHTML = '<p class="text-[#d3c5ac] text-xs uppercase tracking-widest animate-pulse">Cargando reseñas...</p>';
+	try {
+		const res = await fetch(`/api/courts/${courtId}/reviews`);
+		const reviews = await res.json();
+		if (!reviews.length) {
+			list.innerHTML = '<div class="text-center py-10"><span class="material-symbols-outlined text-4xl text-[#4f4632] block mb-2">star</span><p class="text-[#d3c5ac] text-xs uppercase tracking-widest">Todavía no hay reseñas para esta cancha.</p></div>';
+			return;
+		}
+		list.innerHTML = reviews.map(rv => `
+			<div class="p-4 bg-white/5 rounded-2xl border border-white/5">
+				<div class="flex items-center justify-between mb-2">
+					<div class="flex items-center gap-2">
+						<div class="h-8 w-8 rounded-full bg-[#f7bb07]/20 border border-[#f7bb07]/30 flex items-center justify-center font-black text-[#f7bb07] text-xs">${rv.username[0].toUpperCase()}</div>
+						<span class="text-xs font-bold">${rv.username}</span>
+					</div>
+					<span class="text-[#f7bb07] text-xs tracking-wider">${'★'.repeat(rv.rating)}${'☆'.repeat(5 - rv.rating)}</span>
+				</div>
+				${rv.comment ? `<p class="text-xs text-[#d3c5ac] leading-relaxed">${rv.comment}</p>` : ''}
+				<span class="block text-[9px] text-[#d3c5ac]/50 uppercase tracking-widest mt-2">${new Date(rv.created_at).toLocaleDateString()}</span>
+			</div>
+		`).join('');
+	} catch (e) {
+		list.innerHTML = '<p class="text-red-400 text-xs text-center py-8 uppercase tracking-widest">Error al cargar reseñas</p>';
+	}
+}
+
+document.getElementById('reviews-modal-close')?.addEventListener('click', closeReviewsModal);
+document.getElementById('reviews-modal')?.addEventListener('click', (e) => {
+	if (e.target === document.getElementById('reviews-modal')) closeReviewsModal();
+});
 
 // ── Booking Modal ──
 function openBookingModal(courtId, token = null, freeHours = 0) {
@@ -163,8 +255,8 @@ function openBookingModal(courtId, token = null, freeHours = 0) {
 		}
 	});
 
-	// Fecha mínima = hoy
-	const today = new Date().toISOString().split('T')[0];
+	// Fecha mínima = hoy (en hora local del usuario)
+	const today = getLocalDateString();
 	document.getElementById('modal-date').min = today;
 	document.getElementById('modal-date').value = '';
 	document.getElementById('slots-container').innerHTML = '<p class="col-span-4 text-[#d3c5ac] text-xs text-center py-4 animate-pulse uppercase tracking-widest">Seleccioná una fecha primero</p>';
@@ -235,21 +327,29 @@ async function renderSlots(dateStr) {
 		const booked = await res.json();
 
 		const hours = Array.from({length: 16}, (_, i) => i + 7); // 07:00 a 22:00
+		const cutoff = getSameDayCutoff(dateStr, 30);
 		selectedHour = null;
 
-		container.innerHTML = hours.map(h => {
-			// Verificar si este bloque está libre dado la duración
+		const availableSlots = hours.filter(h => {
+			const slotStart = createLocalDate(dateStr, h);
+			const slotEnd = new Date(slotStart.getTime() + selectedDuration * 60 * 60 * 1000);
+			if (cutoff && slotStart.getTime() < cutoff.getTime()) return false;
+			if (slotEnd.getHours() > 23 || (slotEnd.getHours() === 23 && slotEnd.getMinutes() > 0)) return false;
 			let blocked = false;
 			for (let bk of booked) {
 				if (h < bk.end && h + selectedDuration > bk.start) { blocked = true; break; }
 			}
-			// No mostrar si el bloque de duración cae fuera de horario
-			if (h + selectedDuration > 23) blocked = true;
+			return !blocked;
+		});
 
+		if (!availableSlots.length) {
+			container.innerHTML = '<p class="col-span-4 text-[#d3c5ac] text-xs text-center py-4 uppercase tracking-widest">No hay horarios disponibles para esta fecha.</p>';
+			return;
+		}
+
+		container.innerHTML = availableSlots.map(h => {
 			const label = `${String(h).padStart(2,'0')}:00`;
-			return `<button data-hour="${h}" class="slot-btn py-2 rounded-xl text-xs font-black uppercase tracking-widest border-2 transition-all
-				${blocked ? 'border-red-500/20 text-red-500/40 bg-red-500/5 cursor-not-allowed' : 'border-white/10 text-[#d3c5ac] hover:border-[#f7bb07] hover:text-[#f7bb07]'}"
-				${blocked ? 'disabled' : ''}>${label}</button>`;
+			return `<button data-hour="${h}" class="slot-btn py-2 rounded-xl text-xs font-black uppercase tracking-widest border-2 transition-all border-white/10 text-[#d3c5ac] hover:border-[#f7bb07] hover:text-[#f7bb07]">${label}</button>`;
 		}).join('');
 
 		container.querySelectorAll('.slot-btn:not([disabled])').forEach(btn => {
@@ -397,8 +497,9 @@ document.getElementById('search-input')?.addEventListener('input', (e) => {
 // ── Init ──
 const dtDefault = document.getElementById('booking-date');
 if (dtDefault) {
-	const d = new Date(); d.setHours(d.getHours() + 1, 0, 0, 0);
-	dtDefault.value = d.toISOString().slice(0, 16);
+	const d = new Date();
+	d.setHours(d.getHours() + 1, 0, 0, 0);
+	dtDefault.value = getLocalDateTimeInputValue(d);
 }
 
 // Exponer openBookingModal globalmente para premios.js

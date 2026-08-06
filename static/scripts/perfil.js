@@ -3,12 +3,33 @@
 let showAll = false;
 let reservations = [];
 let pendingCancelReservationId = null;
+let cancellationPolicy = [];
+let reviewRating = 0;
+let reviewReservationId = null;
 
 function showToast(msg, type = '') {
     const t = document.getElementById('toast');
     t.textContent = msg;
     t.className = `toast ${type} show`;
     setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+async function loadCancellationPolicy() {
+    try {
+        const res = await fetch('/api/cancellation-policy');
+        cancellationPolicy = await res.json();
+    } catch (e) { cancellationPolicy = []; }
+}
+
+function getRefundTier(hoursRemaining) {
+    const tiers = cancellationPolicy
+        .filter(t => !t.is_noshow)
+        .sort((a, b) => b.hours_before - a.hours_before);
+    let tier = tiers[tiers.length - 1] || null;
+    for (const t of tiers) {
+        if (hoursRemaining >= t.hours_before) { tier = t; break; }
+    }
+    return tier;
 }
 
 async function loadProfile() {
@@ -68,7 +89,8 @@ function renderReservations() {
         const dt = new Date(r.start_datetime);
         const isConfirmed = r.estado === 'confirmed';
         const isPast = dt < new Date();
-        const canCancel = isConfirmed && !isPast && (dt - new Date() > 24 * 60 * 60 * 1000);
+        const canCancel = isConfirmed && !isPast;
+        const canReview = isConfirmed && isPast && !r.has_review;
         return `
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-white/10 transition-all">
             <div class="flex items-center gap-4 min-w-0">
@@ -85,6 +107,10 @@ function renderReservations() {
                 <span class="${isConfirmed ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'} px-2 py-1 rounded text-[8px] font-black uppercase tracking-widest border">
                     ${r.estado}
                 </span>
+                ${canReview ? `<button data-id="${r.id}" data-court="${r.court_id}" class="review-btn inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[#f7bb07]/10 text-[#f7bb07] border border-[#f7bb07]/20 hover:bg-[#f7bb07]/20 transition-colors text-[10px] font-black uppercase tracking-widest">
+                    <span class="material-symbols-outlined text-sm">star</span>
+                    Calificar
+                </button>` : ''}
                 ${canCancel ? `<button data-id="${r.id}" class="cancel-btn inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors text-[10px] font-black uppercase tracking-widest">
                     <span class="material-symbols-outlined text-sm">cancel</span>
                     Cancelar
@@ -96,11 +122,90 @@ function renderReservations() {
     document.querySelectorAll('.cancel-btn').forEach(btn => {
         btn.addEventListener('click', () => openCancelConfirm(parseInt(btn.dataset.id)));
     });
+    document.querySelectorAll('.review-btn').forEach(btn => {
+        btn.addEventListener('click', () => openReviewModal(parseInt(btn.dataset.id), parseInt(btn.dataset.court)));
+    });
 }
 
 function openCancelConfirm(id) {
     pendingCancelReservationId = id;
+    const res = reservations.find(r => r.id === id);
+    const infoEl = document.getElementById('cancel-refund-info');
+    if (res && infoEl) {
+        const hours = (new Date(res.start_datetime) - new Date()) / 3600000;
+        const tier = getRefundTier(hours);
+        const points = res.points_earned || 0;
+        const reversed = Math.round(points * (100 - (tier ? tier.refund_percent : 0)) / 100);
+        if (tier) {
+            infoEl.innerHTML = `
+                <div class="bg-white/5 border border-white/10 rounded-xl px-4 py-3">
+                    <span class="block text-[10px] font-black uppercase tracking-widest text-[#f7bb07] mb-1">${tier.label}</span>
+                    <span class="text-xs text-[#d3c5ac]">Reembolso: ${tier.refund_percent}% · Se descontarán ${reversed} pts de tu saldo</span>
+                </div>`;
+        } else {
+            infoEl.innerHTML = '';
+        }
+    }
     document.getElementById('cancel-confirm-modal').style.display = 'flex';
+}
+
+// ── Modal de reseñas ──
+function openReviewModal(reservationId, courtId) {
+    reviewReservationId = reservationId;
+    reviewRating = 0;
+    const court = reservations.find(r => r.id === reservationId);
+    document.getElementById('review-modal-court-name').textContent = court ? court.court_name : '';
+    document.getElementById('review-comment').value = '';
+    document.getElementById('review-error').classList.add('hidden');
+    document.querySelectorAll('.star-btn').forEach(b => {
+        const v = parseInt(b.dataset.star);
+        b.classList.toggle('text-[#f7bb07]', v <= reviewRating);
+        b.classList.toggle('text-[#4f4632]', v > reviewRating);
+    });
+    document.getElementById('review-modal').style.display = 'flex';
+}
+
+function closeReviewModal() {
+    reviewReservationId = null;
+    reviewRating = 0;
+    document.getElementById('review-modal').style.display = 'none';
+}
+
+async function submitReview() {
+    if (reviewRating < 1) { showToast('Seleccioná una calificación', 'error'); return; }
+    if (!reviewReservationId) return;
+    const btn = document.getElementById('submit-review-btn');
+    btn.textContent = 'Enviando...';
+    btn.disabled = true;
+    try {
+        const comment = document.getElementById('review-comment').value.trim();
+        const courtId = reservations.find(r => r.id === reviewReservationId)?.court_id;
+        const res = await fetch('/api/reviews', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                court_id: courtId,
+                reservation_id: reviewReservationId,
+                rating: reviewRating,
+                comment
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('¡Gracias por tu reseña!', 'success');
+            closeReviewModal();
+            await loadReservations();
+        } else {
+            document.getElementById('review-error').textContent = data.error || 'No se pudo enviar la reseña';
+            document.getElementById('review-error').classList.remove('hidden');
+        }
+    } catch (e) {
+        document.getElementById('review-error').textContent = 'Error de red. Intenta de nuevo.';
+        document.getElementById('review-error').classList.remove('hidden');
+    } finally {
+        btn.textContent = 'Enviar Reseña';
+        btn.disabled = false;
+    }
 }
 
 function closeCancelConfirm() {
@@ -113,7 +218,11 @@ async function cancelReservation(id) {
         const res = await fetch(`/api/cancel/${id}`, { method: 'POST' });
         const data = await res.json();
         if (data.success) {
-            showToast('Reserva cancelada', 'success');
+            if (data.refund_percent < 100) {
+                showToast(`Cancelada · Se descontaron ${data.points_reversed} pts`, 'error');
+            } else {
+                showToast('Reserva cancelada con reembolso total', 'success');
+            }
             await loadReservations();
             await loadProfile();
         } else {
@@ -148,5 +257,23 @@ document.getElementById('toggle-history')?.addEventListener('click', () => {
     renderReservations();
 });
 
+document.querySelectorAll('.star-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        reviewRating = parseInt(btn.dataset.star);
+        document.querySelectorAll('.star-btn').forEach(b => {
+            const v = parseInt(b.dataset.star);
+            b.classList.toggle('text-[#f7bb07]', v <= reviewRating);
+            b.classList.toggle('text-[#4f4632]', v > reviewRating);
+        });
+    });
+});
+
+document.getElementById('close-review-modal')?.addEventListener('click', closeReviewModal);
+document.getElementById('submit-review-btn')?.addEventListener('click', submitReview);
+document.getElementById('review-modal')?.addEventListener('click', (e) => {
+    if (e.target === document.getElementById('review-modal')) closeReviewModal();
+});
+
+loadCancellationPolicy();
 loadProfile();
 loadReservations();

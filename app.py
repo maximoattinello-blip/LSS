@@ -1,9 +1,15 @@
 import os
+import random
+import smtplib
 import sqlite3
+import threading
+import time
 import uuid
+from email.message import EmailMessage
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from datetime import datetime, timedelta
 from functools import wraps
+from werkzeug.security import check_password_hash, generate_password_hash
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
 app.secret_key = 'resermax_dev_secret_key_replace_in_production'
@@ -55,6 +61,66 @@ def court_to_dict(row):
 	court['image_url'] = COURT_IMAGE_URLS.get(image_key, '')
 	return court
 
+def verify_password(stored_password, submitted_password):
+	if not stored_password:
+		return False
+	if stored_password.startswith(('pbkdf2:', 'scrypt:')):
+		return check_password_hash(stored_password, submitted_password)
+	return stored_password == submitted_password
+
+def send_email_message(to_email, subject, body):
+	smtp_host = os.environ.get('SMTP_HOST', 'smtp.gmail.com').strip()
+	smtp_port = int(os.environ.get('SMTP_PORT', '587'))
+	smtp_user = os.environ.get('SMTP_USER', 'lssresermax@gmail.com').strip()
+	smtp_password = os.environ.get('SMTP_PASSWORD', 'ehqjcapivzygcink').strip()
+	email_from = os.environ.get('EMAIL_FROM', smtp_user or 'lssresermax@gmail.com').strip()
+	if not smtp_host or not smtp_user or not smtp_password:
+		return False
+
+	msg = EmailMessage()
+	msg['Subject'] = subject
+	msg['From'] = email_from
+	msg['To'] = to_email
+	msg.set_content(body)
+
+	try:
+		with smtplib.SMTP(smtp_host, smtp_port, timeout=15) as smtp:
+			if os.environ.get('SMTP_USE_TLS', '1') != '0':
+				smtp.starttls()
+			smtp.login(smtp_user, smtp_password)
+			smtp.send_message(msg)
+		return True
+	except Exception as e:
+		print(f'[EMAIL ERROR] No se pudo enviar el correo a {to_email}: {e}')
+		return False
+
+
+def send_recovery_code_email(to_email, code):
+	body = (
+		f'Tu codigo de recuperacion RESERMAX es: {code}\n\n'
+		'Este codigo vence en 15 minutos. Si no solicitaste este cambio, ignora este correo.'
+	)
+	return send_email_message(to_email, 'Codigo de recuperacion RESERMAX', body)
+
+
+def send_reservation_reminder_email(to_email, user_name, court_name, start_datetime, reminder_hours):
+	try:
+		start_dt = datetime.fromisoformat(start_datetime)
+	except Exception:
+		start_dt = datetime.now()
+	start_label = start_dt.strftime('%d/%m/%Y a las %H:%M')
+	body = (
+		f'Hola {user_name},\n\n'
+		f'Te recordamos que tu reserva en {court_name} está programada para el {start_label}.\n'
+		f'Faltan {reminder_hours} horas para que comience tu turno.\n\n'
+		'Gracias por reservar con RESERMAX.'
+	)
+	return send_email_message(
+		to_email,
+		f'RESERMAX: recordatorio de reserva en {reminder_hours} horas',
+		body
+	)
+
 # ==========================================
 # DATABASE HELPERS
 # ==========================================
@@ -91,6 +157,15 @@ def migrate_db():
 	# redemptions: token único y estado de uso
 	add_column_if_missing(c, 'redemptions', 'token', 'TEXT')
 	add_column_if_missing(c, 'redemptions', 'used',  'INTEGER DEFAULT 0')
+
+	# users: estado de cuenta para gestión administrativa
+	add_column_if_missing(c, 'users', 'status', "TEXT DEFAULT 'active'")
+
+	# reservations: registro de reembolsos parciales y fecha de cancelación
+	add_column_if_missing(c, 'reservations', 'refunded_points', 'INTEGER DEFAULT 0')
+	add_column_if_missing(c, 'reservations', 'cancelled_at', 'TEXT')
+	add_column_if_missing(c, 'reservations', 'reminder_24_sent', 'INTEGER DEFAULT 0')
+	add_column_if_missing(c, 'reservations', 'reminder_12_sent', 'INTEGER DEFAULT 0')
 
 	conn.commit()
 	conn.close()
@@ -132,6 +207,8 @@ def init_db():
 		paid INTEGER DEFAULT 1,
 		points_earned INTEGER DEFAULT 0,
 		is_free_hours INTEGER DEFAULT 0,
+		reminder_24_sent INTEGER DEFAULT 0,
+		reminder_12_sent INTEGER DEFAULT 0,
 		created_at TEXT DEFAULT (datetime('now')),
 		FOREIGN KEY (user_id) REFERENCES users(id),
 		FOREIGN KEY (court_id) REFERENCES courts(id)
@@ -160,6 +237,17 @@ def init_db():
 		FOREIGN KEY (reward_id) REFERENCES rewards(id)
 	)''')
 
+	c.execute('''CREATE TABLE IF NOT EXISTS password_reset_codes (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		user_id INTEGER NOT NULL,
+		code_hash TEXT NOT NULL,
+		expires_at TEXT NOT NULL,
+		used INTEGER DEFAULT 0,
+		attempts INTEGER DEFAULT 0,
+		created_at TEXT DEFAULT (datetime('now')),
+		FOREIGN KEY (user_id) REFERENCES users(id)
+	)''')
+
 	c.execute('''CREATE TABLE IF NOT EXISTS disabled_days (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		date TEXT NOT NULL,
@@ -179,6 +267,40 @@ def init_db():
 		recurring INTEGER DEFAULT 0,
 		created_by INTEGER,
 		created_at TEXT DEFAULT (datetime('now'))
+	)''')
+
+	c.execute('''CREATE TABLE IF NOT EXISTS reviews (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		court_id INTEGER NOT NULL,
+		user_id INTEGER NOT NULL,
+		reservation_id INTEGER NOT NULL UNIQUE,
+		rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+		comment TEXT,
+		created_at TEXT DEFAULT (datetime('now')),
+		FOREIGN KEY (court_id) REFERENCES courts(id),
+		FOREIGN KEY (user_id) REFERENCES users(id)
+	)''')
+
+	c.execute('''CREATE TABLE IF NOT EXISTS point_adjustments (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		user_id INTEGER NOT NULL,
+		points INTEGER NOT NULL,
+		reason TEXT,
+		admin_id INTEGER,
+		created_at TEXT DEFAULT (datetime('now')),
+		FOREIGN KEY (user_id) REFERENCES users(id),
+		FOREIGN KEY (admin_id) REFERENCES users(id)
+	)''')
+
+	c.execute('''CREATE TABLE IF NOT EXISTS cancellation_policy (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		hours_before REAL NOT NULL,
+		refund_percent REAL NOT NULL,
+		label TEXT,
+		penalty_points INTEGER DEFAULT 0,
+		is_noshow INTEGER DEFAULT 0,
+		sort_order INTEGER DEFAULT 0,
+		active INTEGER DEFAULT 1
 	)''')
 
 	# Seed admins
@@ -271,11 +393,106 @@ def seed_rewards():
 		conn.commit()
 	conn.close()
 
+def seed_cancellation_policy():
+	"""Inserta la política de cancelación por niveles solo si la tabla está vacía."""
+	conn = get_db()
+	c = conn.cursor()
+	count = c.execute('SELECT COUNT(*) FROM cancellation_policy').fetchone()[0]
+	if count == 0:
+		defaults = [
+			# (hours_before, refund_percent, label, penalty_points, is_noshow, sort_order)
+			(24, 100, 'Cancelación con más de 24h de anticipación', 0, 0, 1),
+			(12, 50,  'Cancelación con 12–24h de anticipación',      0, 0, 2),
+			(0,  0,   'Cancelación con menos de 12h de anticipación', 0, 0, 3),
+			(0,  0,   'No-show (inasistencia registrada)',           100, 1, 4),
+		]
+		for row in defaults:
+			c.execute('''
+				INSERT INTO cancellation_policy (hours_before, refund_percent, label, penalty_points, is_noshow, sort_order)
+				VALUES (?,?,?,?,?,?)
+			''', row)
+		conn.commit()
+		print("Política de cancelación inicial insertada.")
+	conn.close()
+
+def get_refund_tier(conn, hours_remaining):
+	"""Devuelve el nivel de reembolso aplicable según las horas restantes."""
+	rows = conn.execute('''
+		SELECT * FROM cancellation_policy
+		WHERE active=1 AND is_noshow=0
+		ORDER BY hours_before DESC
+	''').fetchall()
+	tier = rows[-1] if rows else None
+	for row in rows:
+		if hours_remaining >= float(row['hours_before']):
+			tier = row
+			break
+	return tier
+
+def get_court_ratings(conn, court_id):
+	row = conn.execute(
+		'SELECT COUNT(*) as cnt, ROUND(AVG(rating), 2) as avg FROM reviews WHERE court_id=?',
+		(court_id,)
+	).fetchone()
+	return {
+		'rating_count': row['cnt'] or 0,
+		'rating_avg': float(row['avg']) if row['avg'] is not None else 0.0,
+	}
+
 # Ejecutar en orden: primero crear tablas, luego migrar columnas, luego seed
 init_db()
 migrate_db()
 sync_court_catalog()
 seed_rewards()
+seed_cancellation_policy()
+
+REMINDER_WORKER_STARTED = False
+
+
+def process_pending_reservation_reminders():
+	global REMINDER_WORKER_STARTED
+	while True:
+		try:
+			conn = get_db()
+			now = datetime.now()
+			rows = conn.execute('''
+				SELECT r.*, u.email, u.username, c.name AS court_name
+				FROM reservations r
+				JOIN users u ON u.id = r.user_id
+				JOIN courts c ON c.id = r.court_id
+				WHERE r.estado = 'confirmed'
+			''').fetchall()
+			for row in rows:
+				try:
+					start_dt = datetime.fromisoformat(row['start_datetime'])
+				except Exception:
+					continue
+				if start_dt <= now:
+					continue
+				hours_until = (start_dt - now).total_seconds() / 3600.0
+				if row['reminder_24_sent'] != 1 and hours_until <= 24 and hours_until > 12:
+					if send_reservation_reminder_email(row['email'], row['username'], row['court_name'], row['start_datetime'], 24):
+						conn.execute('UPDATE reservations SET reminder_24_sent=1 WHERE id=?', (row['id'],))
+				elif row['reminder_12_sent'] != 1 and hours_until <= 12 and hours_until > 0:
+					if send_reservation_reminder_email(row['email'], row['username'], row['court_name'], row['start_datetime'], 12):
+						conn.execute('UPDATE reservations SET reminder_12_sent=1 WHERE id=?', (row['id'],))
+			conn.commit()
+			conn.close()
+		except Exception as e:
+			print(f'[REMINDERS ERROR] {e}')
+			time.sleep(60)
+
+
+def start_reminder_worker():
+	global REMINDER_WORKER_STARTED
+	if REMINDER_WORKER_STARTED:
+		return
+	REMINDER_WORKER_STARTED = True
+	thread = threading.Thread(target=process_pending_reservation_reminders, daemon=True, name='reservation-reminder-worker')
+	thread.start()
+
+
+start_reminder_worker()
 
 # ==========================================
 # LÓGICA DE DÍAS CON BONUS DE PUNTOS
@@ -359,7 +576,13 @@ def login():
 		conn = get_db()
 		user = conn.execute('SELECT * FROM users WHERE email=?', (email,)).fetchone()
 		conn.close()
-		if user and user['password'] == password:
+		if user and verify_password(user['password'], password):
+			if user['status'] == 'suspended':
+				error = 'Tu cuenta está suspendida temporalmente. Contactá al administrador.'
+				return render_template('login.html', error=error)
+			if user['status'] == 'deactivated':
+				error = 'Tu cuenta fue desactivada por un administrador.'
+				return render_template('login.html', error=error)
 			session['user_id']  = user['id']
 			session['username'] = user['username']
 			session['puesto']   = user['puesto']
@@ -379,13 +602,119 @@ def register():
 		try:
 			conn = get_db()
 			conn.execute('INSERT INTO users (username, email, password, puesto, points) VALUES (?,?,?,?,0)',
-						 (username, email, password, 'ATHLETE'))
+						 (username, email, generate_password_hash(password), 'ATHLETE'))
 			conn.commit()
 			conn.close()
 			return redirect(url_for('login'))
 		except sqlite3.IntegrityError:
 			return render_template('login.html', error='Email ya registrado.', show_register=True)
 	return render_template('login.html', show_register=True)
+
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+	if request.method == 'POST':
+		email = request.form.get('email', '').strip().lower()
+		if not email:
+			return render_template('login.html', show_forgot=True, error='Ingresa tu correo.')
+		conn = get_db()
+		user = conn.execute('SELECT id, email FROM users WHERE lower(email)=?', (email,)).fetchone()
+		if user:
+			code = f'{random.randint(0, 999999):06d}'
+			expires_at = (datetime.now() + timedelta(minutes=15)).isoformat(timespec='seconds')
+			conn.execute('UPDATE password_reset_codes SET used=1 WHERE user_id=? AND used=0', (user['id'],))
+			conn.execute('''
+				INSERT INTO password_reset_codes (user_id, code_hash, expires_at)
+				VALUES (?,?,?)
+			''', (user['id'], generate_password_hash(code), expires_at))
+			conn.commit()
+			email_sent = send_recovery_code_email(user['email'], code)
+			conn.close()
+			if not email_sent:
+				return render_template(
+					'login.html',
+					show_forgot=True,
+					error='No se pudo enviar el correo. Configura SMTP_HOST, SMTP_USER y SMTP_PASSWORD.'
+				)
+		else:
+			conn.close()
+		session['reset_email'] = email
+		return render_template(
+			'login.html',
+			show_verify_code=True,
+			reset_email=email,
+			success='Si el correo existe, enviamos un codigo de recuperacion.'
+		)
+	return render_template('login.html', show_forgot=True)
+
+@app.route('/verify-reset-code', methods=['POST'])
+def verify_reset_code():
+	email = request.form.get('email', '').strip().lower() or session.get('reset_email', '')
+	code = request.form.get('code', '').strip()
+	if not email or not code:
+		return render_template('login.html', show_verify_code=True, reset_email=email, error='Ingresa el codigo recibido.')
+
+	conn = get_db()
+	user = conn.execute('SELECT id FROM users WHERE lower(email)=?', (email,)).fetchone()
+	reset_code = None
+	if user:
+		reset_code = conn.execute('''
+			SELECT * FROM password_reset_codes
+			WHERE user_id=? AND used=0
+			ORDER BY created_at DESC
+			LIMIT 1
+		''', (user['id'],)).fetchone()
+
+	valid = False
+	if reset_code:
+		expired = datetime.fromisoformat(reset_code['expires_at']) < datetime.now()
+		locked = reset_code['attempts'] >= 5
+		valid = not expired and not locked and check_password_hash(reset_code['code_hash'], code)
+		if not valid:
+			conn.execute('UPDATE password_reset_codes SET attempts=attempts+1 WHERE id=?', (reset_code['id'],))
+			conn.commit()
+
+	if not valid:
+		conn.close()
+		return render_template('login.html', show_verify_code=True, reset_email=email, error='Codigo invalido o vencido.')
+
+	session['password_reset_user_id'] = user['id']
+	session['password_reset_code_id'] = reset_code['id']
+	conn.close()
+	return render_template('login.html', show_reset_password=True)
+
+@app.route('/reset-password', methods=['POST'])
+def reset_password():
+	user_id = session.get('password_reset_user_id')
+	code_id = session.get('password_reset_code_id')
+	if not user_id or not code_id:
+		return redirect(url_for('forgot_password'))
+
+	password = request.form.get('password', '').strip()
+	confirm_password = request.form.get('confirm_password', '').strip()
+	if len(password) < 6:
+		return render_template('login.html', show_reset_password=True, error='La nueva clave debe tener al menos 6 caracteres.')
+	if password != confirm_password:
+		return render_template('login.html', show_reset_password=True, error='Las claves no coinciden.')
+
+	conn = get_db()
+	reset_code = conn.execute('''
+		SELECT * FROM password_reset_codes
+		WHERE id=? AND user_id=? AND used=0
+	''', (code_id, user_id)).fetchone()
+	if not reset_code or datetime.fromisoformat(reset_code['expires_at']) < datetime.now():
+		conn.close()
+		session.pop('password_reset_user_id', None)
+		session.pop('password_reset_code_id', None)
+		return render_template('login.html', show_forgot=True, error='El codigo vencio. Solicita uno nuevo.')
+
+	conn.execute('UPDATE users SET password=? WHERE id=?', (generate_password_hash(password), user_id))
+	conn.execute('UPDATE password_reset_codes SET used=1 WHERE id=?', (code_id,))
+	conn.commit()
+	conn.close()
+	session.pop('password_reset_user_id', None)
+	session.pop('password_reset_code_id', None)
+	session.pop('reset_email', None)
+	return render_template('login.html', success='Clave actualizada. Inicia sesion con tu nueva clave.')
 
 @app.route('/logout')
 def logout():
@@ -416,7 +745,7 @@ def admin():
 def api_me():
 	conn = get_db()
 	user = conn.execute(
-		'SELECT id, username, email, points, puesto, member_since FROM users WHERE id=?',
+		'SELECT id, username, email, points, puesto, member_since, status FROM users WHERE id=?',
 		(session['user_id'],)
 	).fetchone()
 	conn.close()
@@ -442,12 +771,13 @@ def api_courts():
 	# Obtener multiplicador de día especial hoy
 	today = datetime.now().date().isoformat()
 	day_multiplier = get_active_points_multiplier(conn, today)
-	
-	conn.close()
+
 	result = [court_to_dict(c) for c in courts]
 	for court in result:
 		court['has_special_day'] = day_multiplier > 1.0
 		court['day_multiplier'] = day_multiplier
+		court.update(get_court_ratings(conn, court['id']))
+	conn.close()
 	return jsonify(result)
 
 @app.route('/api/courts/all')
@@ -459,12 +789,13 @@ def api_courts_all():
 	# Obtener multiplicador de día especial hoy
 	today = datetime.now().date().isoformat()
 	day_multiplier = get_active_points_multiplier(conn, today)
-	
-	conn.close()
+
 	result = [court_to_dict(c) for c in courts]
 	for court in result:
 		court['has_special_day'] = day_multiplier > 1.0
 		court['day_multiplier'] = day_multiplier
+		court.update(get_court_ratings(conn, court['id']))
+	conn.close()
 	return jsonify(result)
 
 @app.route('/api/courts/<int:court_id>/slots')
@@ -517,7 +848,8 @@ def api_point_multiplier():
 def api_reservations():
 	conn = get_db()
 	rows = conn.execute('''
-		SELECT r.*, c.name as court_name, c.type as court_type, c.price
+		SELECT r.*, c.name as court_name, c.type as court_type, c.price,
+		       (SELECT COUNT(*) FROM reviews rv WHERE rv.reservation_id = r.id) AS has_review
 		FROM reservations r
 		JOIN courts c ON r.court_id = c.id
 		WHERE r.user_id=?
@@ -663,6 +995,9 @@ def api_reserve():
 		return jsonify({'success': False, 'error': 'ID de cancha inválido'}), 400
 
 	conn = get_db()
+	if not is_account_active(conn, session['user_id']):
+		conn.close()
+		return jsonify({'success': False, 'error': 'Tu cuenta está suspendida. No podés reservar.'}), 403
 	court = conn.execute('SELECT * FROM courts WHERE id=? AND available=1', (court_id,)).fetchone()
 	if not court:
 		conn.close()
@@ -756,10 +1091,10 @@ def api_reserve():
 
 	conn.execute('''
 		INSERT INTO reservations
-			(user_id, court_id, start_datetime, end_datetime, duration_hours, estado, paid, points_earned, is_free_hours)
-		VALUES (?,?,?,?,?,?,?,?,?)
+			(user_id, court_id, start_datetime, end_datetime, duration_hours, estado, paid, points_earned, is_free_hours, reminder_24_sent, reminder_12_sent)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?)
 	''', (session['user_id'], court_id, start_datetime, end_datetime, duration_hours,
-		  'confirmed', paid, points_earned, 1 if is_free else 0))
+		  'confirmed', paid, points_earned, 1 if is_free else 0, 0, 0))
 	conn.commit()
 	conn.close()
 	return jsonify({
@@ -790,27 +1125,35 @@ def api_cancel(res_id):
 		conn.close()
 		return jsonify({'success': False, 'error': 'Fecha inválida'}), 400
 
-	# ── FUNCIÓN 1: Cancelación con 24h de antelación ──
 	tiempo_restante = dt - datetime.now()
-	if tiempo_restante <= timedelta(hours=24):
-		horas_restantes = int(tiempo_restante.total_seconds() / 3600)
-		if tiempo_restante.total_seconds() <= 0:
-			msg = 'No se puede cancelar una reserva que ya pasó'
-		else:
-			msg = f'Solo quedan {horas_restantes}h para la reserva. Se necesitan más de 24h de anticipación para cancelar'
+	hours_remaining = tiempo_restante.total_seconds() / 3600.0
+	if hours_remaining <= 0:
 		conn.close()
-		return jsonify({'success': False, 'error': msg}), 400
+		return jsonify({'success': False, 'error': 'La reserva ya comenzó. No se puede cancelar.'}), 400
 
-	conn.execute('UPDATE reservations SET estado="cancelled" WHERE id=?', (res_id,))
-	# Descontar los puntos ganados con esa reserva (si no era gratis)
-	if not res['is_free_hours']:
+	# ── Política de cancelación por niveles (configurable) ──
+	tier = get_refund_tier(conn, hours_remaining)
+	refund_percent = float(tier['refund_percent']) if tier else 0.0
+	points_earned  = res['points_earned'] or 0
+	# La reversión es la parte NO reembolsada de los puntos ganados
+	points_reversed = int(round(points_earned * (100 - refund_percent) / 100))
+
+	conn.execute('UPDATE reservations SET estado="cancelled", cancelled_at=datetime("now"), refunded_points=? WHERE id=?',
+				 (points_reversed, res_id))
+	# Descontar los puntos no reembolsados (si no era reserva gratis)
+	if not res['is_free_hours'] and points_reversed > 0:
 		conn.execute(
 			'UPDATE users SET points = MAX(0, points - ?) WHERE id=?',
-			(res['points_earned'], session['user_id'])
+			(points_reversed, session['user_id'])
 		)
 	conn.commit()
 	conn.close()
-	return jsonify({'success': True})
+	return jsonify({
+		'success': True,
+		'refund_percent': refund_percent,
+		'points_reversed': points_reversed,
+		'tier_label': tier['label'] if tier else '',
+	})
 
 @app.route('/api/rewards')
 @login_required
@@ -824,6 +1167,9 @@ def api_rewards():
 @login_required
 def api_redeem(reward_id):
 	conn = get_db()
+	if not is_account_active(conn, session['user_id']):
+		conn.close()
+		return jsonify({'success': False, 'error': 'Tu cuenta está suspendida. No podés canjear.'}), 403
 	reward = conn.execute('SELECT * FROM rewards WHERE id=? AND stock>0', (reward_id,)).fetchone()
 	user   = conn.execute('SELECT * FROM users WHERE id=?', (session['user_id'],)).fetchone()
 	if not reward or not user:
@@ -922,6 +1268,384 @@ def api_admin_toggle_court(court_id):
 	conn.commit()
 	conn.close()
 	return jsonify({'success': True})
+
+def is_account_active(conn, user_id):
+	row = conn.execute('SELECT status FROM users WHERE id=?', (user_id,)).fetchone()
+	return bool(row) and row['status'] == 'active'
+
+# ==========================================
+# RESEÑAS Y CALIFICACIONES
+# ==========================================
+
+@app.route('/api/courts/<int:court_id>/reviews')
+def api_court_reviews(court_id):
+	conn = get_db()
+	rows = conn.execute('''
+		SELECT rv.*, u.username
+		FROM reviews rv JOIN users u ON rv.user_id = u.id
+		WHERE rv.court_id=?
+		ORDER BY rv.created_at DESC
+		LIMIT 50
+	''', (court_id,)).fetchall()
+	conn.close()
+	return jsonify([dict(r) for r in rows])
+
+@app.route('/api/reviews', methods=['POST'])
+@login_required
+def api_add_review():
+	data = request.json or {}
+	try:
+		court_id       = int(data.get('court_id'))
+		reservation_id = int(data.get('reservation_id'))
+		rating         = int(data.get('rating'))
+	except (TypeError, ValueError):
+		return jsonify({'success': False, 'error': 'Datos inválidos'}), 400
+	comment = (data.get('comment') or '').strip()
+	if rating < 1 or rating > 5:
+		return jsonify({'success': False, 'error': 'La calificación debe ser entre 1 y 5 estrellas'}), 400
+
+	conn = get_db()
+	res = conn.execute('SELECT * FROM reservations WHERE id=? AND user_id=?',
+					   (reservation_id, session['user_id'])).fetchone()
+	if not res:
+		conn.close()
+		return jsonify({'success': False, 'error': 'Reserva no encontrada'}), 404
+	if res['court_id'] != court_id:
+		conn.close()
+		return jsonify({'success': False, 'error': 'La reserva no corresponde a esta cancha'}), 400
+	try:
+		started = datetime.fromisoformat(res['start_datetime'])
+	except Exception:
+		started = None
+	if not started or started > datetime.now():
+		conn.close()
+		return jsonify({'success': False, 'error': 'Solo podés calificar reservas ya completadas'}), 400
+	if res['estado'] != 'confirmed':
+		conn.close()
+		return jsonify({'success': False, 'error': 'Solo se califican reservas completadas'}), 400
+	existing = conn.execute('SELECT id FROM reviews WHERE reservation_id=?', (reservation_id,)).fetchone()
+	if existing:
+		conn.close()
+		return jsonify({'success': False, 'error': 'Esta reserva ya fue calificada'}), 409
+
+	conn.execute('INSERT INTO reviews (court_id, user_id, reservation_id, rating, comment) VALUES (?,?,?,?,?)',
+				 (court_id, session['user_id'], reservation_id, rating, comment))
+	conn.commit()
+	conn.close()
+	return jsonify({'success': True})
+
+# ==========================================
+# ANALÍTICAS HISTÓRICAS (ADMIN)
+# ==========================================
+
+@app.route('/api/admin/analytics')
+@admin_required
+def api_admin_analytics():
+	from_arg = request.args.get('from', '').strip()
+	to_arg   = request.args.get('to',   '').strip()
+	today    = datetime.now().date()
+	from_date = today - timedelta(days=30)
+	to_date   = today
+	try:
+		if from_arg: from_date = datetime.fromisoformat(from_arg).date()
+	except ValueError:
+		pass
+	try:
+		if to_arg: to_date = datetime.fromisoformat(to_arg).date()
+	except ValueError:
+		pass
+	if to_date < from_date:
+		from_date, to_date = to_date, from_date
+	fd = from_date.isoformat()
+	td = to_date.isoformat()
+
+	conn = get_db()
+
+	# Ingresos por día
+	rev_rows = conn.execute('''
+		SELECT date(start_datetime) AS day, SUM(c.price * r.duration_hours) AS revenue
+		FROM reservations r JOIN courts c ON r.court_id = c.id
+		WHERE r.estado='confirmed' AND r.is_free_hours=0
+		  AND date(r.start_datetime) BETWEEN ? AND ?
+		GROUP BY date(start_datetime)
+	''', (fd, td)).fetchall()
+	rev_map = {row['day']: float(row['revenue']) for row in rev_rows}
+	days = []
+	cur  = from_date
+	while cur <= to_date:
+		days.append(cur.isoformat())
+		cur += timedelta(days=1)
+	revenue_by_day = [{'date': d, 'revenue': round(rev_map.get(d, 0.0), 2)} for d in days]
+
+	# Reservas por hora pico
+	hour_rows = conn.execute('''
+		SELECT CAST(strftime('%H', start_datetime) AS INTEGER) AS hour, COUNT(*) AS cnt
+		FROM reservations
+		WHERE estado != 'cancelled' AND date(start_datetime) BETWEEN ? AND ?
+		GROUP BY hour
+	''', (fd, td)).fetchall()
+	hour_map = {row['hour']: row['cnt'] for row in hour_rows}
+	bookings_by_hour = [{'hour': h, 'bookings': hour_map.get(h, 0)} for h in range(24)]
+
+	# Canchas más populares
+	pop_rows = conn.execute('''
+		SELECT c.id, c.name, c.type, COUNT(r.id) AS bookings, SUM(c.price * r.duration_hours) AS revenue
+		FROM reservations r JOIN courts c ON r.court_id = c.id
+		WHERE r.estado != 'cancelled' AND date(r.start_datetime) BETWEEN ? AND ?
+		GROUP BY c.id
+		ORDER BY bookings DESC
+	''', (fd, td)).fetchall()
+	popular_courts = [
+		{'court_id': row['id'], 'name': row['name'], 'type': row['type'],
+		 'bookings': row['bookings'], 'revenue': round(float(row['revenue'] or 0), 2)}
+		for row in pop_rows
+	]
+
+	# Tasas de cancelación y no-show
+	total_res   = conn.execute('SELECT COUNT(*) FROM reservations WHERE date(start_datetime) BETWEEN ? AND ?', (fd, td)).fetchone()[0]
+	total_cancelled = conn.execute("SELECT COUNT(*) FROM reservations WHERE estado='cancelled' AND date(start_datetime) BETWEEN ? AND ?", (fd, td)).fetchone()[0]
+	total_noshow    = conn.execute("SELECT COUNT(*) FROM reservations WHERE estado='noshow' AND date(start_datetime) BETWEEN ? AND ?", (fd, td)).fetchone()[0]
+
+	conn.close()
+	return jsonify({
+		'from': fd,
+		'to': td,
+		'total_reservations': total_res,
+		'total_cancelled': total_cancelled,
+		'total_noshow': total_noshow,
+		'total_revenue': round(sum(d['revenue'] for d in revenue_by_day), 2),
+		'range_bookings': sum(d['bookings'] for d in bookings_by_hour),
+		'cancellation_rate': round((total_cancelled / total_res) * 100, 1) if total_res else 0.0,
+		'no_show_rate': round((total_noshow / total_res) * 100, 1) if total_res else 0.0,
+		'revenue_by_day': revenue_by_day,
+		'bookings_by_hour': bookings_by_hour,
+		'popular_courts': popular_courts,
+	})
+
+@app.route('/api/admin/reservations/<int:res_id>/noshow', methods=['POST'])
+@admin_required
+def api_admin_mark_noshow(res_id):
+	conn = get_db()
+	res = conn.execute('SELECT * FROM reservations WHERE id=?', (res_id,)).fetchone()
+	if not res:
+		conn.close()
+		return jsonify({'success': False, 'error': 'Reserva no encontrada'}), 404
+	if res['estado'] == 'noshow':
+		conn.close()
+		return jsonify({'success': False, 'error': 'Ya registrada como no-show'}), 400
+
+	try:
+		start_dt = datetime.fromisoformat(res['start_datetime'])
+	except Exception:
+		conn.close()
+		return jsonify({'success': False, 'error': 'Fecha inválida de la reserva'}), 400
+
+	now = datetime.now()
+	if now.date() != start_dt.date() or now.hour != start_dt.hour:
+		conn.close()
+		return jsonify({'success': False, 'error': 'Solo se puede marcar como no-show en la fecha y hora de la reserva'}), 400
+	if now < start_dt or now >= start_dt + timedelta(hours=1):
+		conn.close()
+		return jsonify({'success': False, 'error': 'El no-show solo está habilitado durante la hora de la reserva'}), 400
+
+	noshow_tier = conn.execute(
+		'SELECT * FROM cancellation_policy WHERE active=1 AND is_noshow=1 ORDER BY sort_order ASC LIMIT 1'
+	).fetchone()
+	refund_percent = float(noshow_tier['refund_percent']) if noshow_tier else 0.0
+	penalty        = int(noshow_tier['penalty_points']) if noshow_tier else 0
+	points_earned  = res['points_earned'] or 0
+	points_reversed = int(round(points_earned * (100 - refund_percent) / 100))
+
+	if not res['is_free_hours']:
+		total_deduction = points_reversed + penalty
+		if total_deduction > 0:
+			conn.execute('UPDATE users SET points = MAX(0, points - ?) WHERE id=?',
+						 (total_deduction, res['user_id']))
+			if penalty > 0:
+				conn.execute(
+					'INSERT INTO point_adjustments (user_id, points, reason, admin_id) VALUES (?,?,?,?)',
+					(res['user_id'], -penalty, 'Penalización por no-show', session['user_id'])
+				)
+	conn.execute('UPDATE reservations SET estado="noshow", refunded_points=? WHERE id=?',
+				 (points_reversed, res_id))
+	conn.commit()
+	conn.close()
+	return jsonify({
+		'success': True,
+		'refund_percent': refund_percent,
+		'points_reversed': points_reversed,
+		'penalty_points': penalty,
+	})
+
+# ==========================================
+# POLÍTICA DE CANCELACIÓN Y REEMBOLSO
+# ==========================================
+
+@app.route('/api/cancellation-policy')
+def api_cancellation_policy():
+	conn = get_db()
+	rows = conn.execute('SELECT * FROM cancellation_policy WHERE active=1 ORDER BY sort_order ASC').fetchall()
+	conn.close()
+	return jsonify([dict(r) for r in rows])
+
+@app.route('/api/admin/cancellation-policy')
+@admin_required
+def api_admin_cancellation_policy():
+	conn = get_db()
+	rows = conn.execute('SELECT * FROM cancellation_policy ORDER BY sort_order ASC').fetchall()
+	conn.close()
+	return jsonify([dict(r) for r in rows])
+
+@app.route('/api/admin/cancellation-policy', methods=['POST'])
+@admin_required
+def api_admin_save_cancellation_policy():
+	data  = request.json or {}
+	tiers = data.get('tiers')
+	if not isinstance(tiers, list) or len(tiers) < 2:
+		return jsonify({'success': False, 'error': 'Se necesitan al menos 2 niveles de política'}), 400
+
+	normalized = []
+	for t in tiers:
+		try:
+			hours  = float(t.get('hours_before', 0))
+			refund = float(t.get('refund_percent', 0))
+			penalty = int(t.get('penalty_points', 0))
+		except (TypeError, ValueError):
+			return jsonify({'success': False, 'error': 'Valores numéricos inválidos'}), 400
+		if refund < 0 or refund > 100:
+			return jsonify({'success': False, 'error': 'El porcentaje de reembolso debe estar entre 0 y 100'}), 400
+		if penalty < 0:
+			return jsonify({'success': False, 'error': 'La penalización no puede ser negativa'}), 400
+		normalized.append({
+			'hours_before': hours,
+			'refund_percent': refund,
+			'label': (t.get('label') or '').strip(),
+			'penalty_points': penalty,
+			'is_noshow': 1 if t.get('is_noshow') else 0,
+		})
+
+	ordered = sorted(normalized, key=lambda x: (1 if x['is_noshow'] else 0, -x['hours_before']))
+	conn = get_db()
+	conn.execute('DELETE FROM cancellation_policy')
+	for idx, t in enumerate(ordered):
+		conn.execute('''
+			INSERT INTO cancellation_policy (hours_before, refund_percent, label, penalty_points, is_noshow, sort_order, active)
+			VALUES (?,?,?,?,?,?,1)
+		''', (t['hours_before'], t['refund_percent'], t['label'], t['penalty_points'], t['is_noshow'], idx + 1))
+	conn.commit()
+	conn.close()
+	return jsonify({'success': True})
+
+# ==========================================
+# GESTIÓN DE USUARIOS (ADMIN)
+# ==========================================
+
+@app.route('/api/admin/users')
+@admin_required
+def api_admin_users():
+	q      = request.args.get('q', '').strip()
+	status = request.args.get('status', '').strip()
+	query = '''
+		SELECT u.id, u.username, u.email, u.puesto, u.points, u.status, u.member_since,
+		       (SELECT COUNT(*) FROM reservations r WHERE r.user_id = u.id) AS bookings,
+		       (SELECT COUNT(*) FROM reviews rv WHERE rv.user_id = u.id) AS reviews
+		FROM users u
+	'''
+	where  = []
+	params = []
+	if q:
+		where.append('(u.username LIKE ? OR u.email LIKE ?)')
+		params.extend([f'%{q}%', f'%{q}%'])
+	if status:
+		where.append('u.status=?')
+		params.append(status)
+	if where:
+		query += ' WHERE ' + ' AND '.join(where)
+	query += ' ORDER BY u.member_since DESC, u.id DESC'
+	conn = get_db()
+	rows = conn.execute(query, params).fetchall()
+	conn.close()
+	return jsonify([dict(r) for r in rows])
+
+@app.route('/api/admin/users/<int:user_id>/points', methods=['POST'])
+@admin_required
+def api_admin_adjust_points(user_id):
+	data = request.json or {}
+	try:
+		points = int(data.get('points'))
+	except (TypeError, ValueError):
+		return jsonify({'success': False, 'error': 'Cantidad de puntos inválida'}), 400
+	reason = (data.get('reason') or '').strip()
+	if points == 0:
+		return jsonify({'success': False, 'error': 'El ajuste debe ser distinto de 0'}), 400
+	if not reason:
+		return jsonify({'success': False, 'error': 'El motivo es obligatorio'}), 400
+
+	conn = get_db()
+	user = conn.execute('SELECT id, points FROM users WHERE id=?', (user_id,)).fetchone()
+	if not user:
+		conn.close()
+		return jsonify({'success': False, 'error': 'Usuario no encontrado'}), 404
+	new_points = max(0, user['points'] + points)
+	conn.execute('UPDATE users SET points=? WHERE id=?', (new_points, user_id))
+	conn.execute('INSERT INTO point_adjustments (user_id, points, reason, admin_id) VALUES (?,?,?,?)',
+				 (user_id, points, reason, session['user_id']))
+	conn.commit()
+	conn.close()
+	return jsonify({'success': True, 'points': new_points})
+
+@app.route('/api/admin/users/<int:user_id>/status', methods=['POST'])
+@admin_required
+def api_admin_set_user_status(user_id):
+	data   = request.json or {}
+	status = (data.get('status') or '').strip()
+	if status not in ('active', 'suspended', 'deactivated'):
+		return jsonify({'success': False, 'error': 'Estado inválido'}), 400
+	if user_id == session['user_id']:
+		return jsonify({'success': False, 'error': 'No podés cambiar tu propio estado'}), 400
+	conn = get_db()
+	user = conn.execute('SELECT id FROM users WHERE id=?', (user_id,)).fetchone()
+	if not user:
+		conn.close()
+		return jsonify({'success': False, 'error': 'Usuario no encontrado'}), 404
+	conn.execute('UPDATE users SET status=? WHERE id=?', (status, user_id))
+	conn.commit()
+	conn.close()
+	return jsonify({'success': True})
+
+@app.route('/api/admin/users/<int:user_id>/history')
+@admin_required
+def api_admin_user_history(user_id):
+	conn = get_db()
+	user = conn.execute(
+		'SELECT id, username, email, points, status, puesto, member_since FROM users WHERE id=?',
+		(user_id,)
+	).fetchone()
+	if not user:
+		conn.close()
+		return jsonify({'error': 'Usuario no encontrado'}), 404
+	reservations = conn.execute('''
+		SELECT r.*, c.name AS court_name FROM reservations r
+		JOIN courts c ON r.court_id = c.id
+		WHERE r.user_id=? ORDER BY r.created_at DESC
+	''', (user_id,)).fetchall()
+	adjustments = conn.execute('''
+		SELECT pa.*, a.username AS admin_name FROM point_adjustments pa
+		LEFT JOIN users a ON pa.admin_id = a.id
+		WHERE pa.user_id=? ORDER BY pa.created_at DESC
+	''', (user_id,)).fetchall()
+	reviews = conn.execute('''
+		SELECT rv.*, c.name AS court_name FROM reviews rv
+		JOIN courts c ON rv.court_id = c.id
+		WHERE rv.user_id=? ORDER BY rv.created_at DESC
+	''', (user_id,)).fetchall()
+	conn.close()
+	return jsonify({
+		'user': dict(user),
+		'reservations': [dict(r) for r in reservations],
+		'adjustments': [dict(r) for r in adjustments],
+		'reviews': [dict(r) for r in reviews],
+	})
 
 if __name__ == '__main__':
 	app.run(host='127.0.0.1', port=5000, debug=True)

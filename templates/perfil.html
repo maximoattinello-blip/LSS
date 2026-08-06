@@ -139,6 +139,7 @@
                     <p class="text-[#d3c5ac] text-sm">Estas seguro que quieres cancelar la reserva?</p>
                 </div>
             </div>
+            <div id="cancel-refund-info" class="mb-6"></div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button id="confirm-cancel-reservation" class="py-3 rounded-xl bg-red-500 text-white font-black uppercase tracking-widest text-xs hover:bg-red-400 transition-all">
                     Si, cancelar reserva
@@ -147,6 +148,33 @@
                     No, cancelar proceso
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- Review Modal -->
+    <div id="review-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <div class="bg-[#131313] rounded-2xl p-8 w-full max-w-md border border-white/10 shadow-2xl">
+            <div class="flex justify-between items-start mb-6">
+                <div>
+                    <h3 class="font-['Space_Grotesk'] text-xl font-black uppercase tracking-tighter mb-1">Calificar Cancha</h3>
+                    <p id="review-modal-court-name" class="text-[#d3c5ac] text-xs uppercase tracking-widest"></p>
+                </div>
+                <button id="close-review-modal" class="text-[#d3c5ac] hover:text-white transition-colors">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="flex justify-center gap-2 mb-6">
+                <button data-star="1" class="star-btn text-4xl text-[#4f4632] hover:text-[#f7bb07] transition-colors">★</button>
+                <button data-star="2" class="star-btn text-4xl text-[#4f4632] hover:text-[#f7bb07] transition-colors">★</button>
+                <button data-star="3" class="star-btn text-4xl text-[#4f4632] hover:text-[#f7bb07] transition-colors">★</button>
+                <button data-star="4" class="star-btn text-4xl text-[#4f4632] hover:text-[#f7bb07] transition-colors">★</button>
+                <button data-star="5" class="star-btn text-4xl text-[#4f4632] hover:text-[#f7bb07] transition-colors">★</button>
+            </div>
+            <textarea id="review-comment" rows="4" placeholder="Contanos cómo fue tu experiencia..." class="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm outline-none focus:border-[#f7bb07] resize-none mb-4"></textarea>
+            <button id="submit-review-btn" class="w-full py-3 rounded-xl bg-[#f7bb07] text-black font-black uppercase tracking-widest text-xs hover:scale-[1.02] transition-all">
+                Enviar Reseña
+            </button>
+            <p id="review-error" class="mt-3 text-center text-red-400 text-xs font-bold uppercase tracking-widest hidden"></p>
         </div>
     </div>
 

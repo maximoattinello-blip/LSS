@@ -7,6 +7,7 @@
 	<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;900&family=Manrope:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 	<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 	<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+	<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 	<link rel="stylesheet" href="/static/css/index.css">
 </head>
 <body class="bg-[#0a0a0a] text-[#e5e2e1] font-['Manrope'] selection:bg-[#f7bb07] selection:text-[#000000] flex min-h-screen">
@@ -32,6 +33,14 @@
 			<a href="#" id="nav-multipliers" data-section="multipliers" class="nav-link flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 text-[#d3c5ac] hover:text-white transition-all">
 				<span class="material-symbols-outlined">offline_bolt</span>
 				<span class="hidden lg:block font-bold text-xs uppercase tracking-widest">Puntos x2</span>
+			</a>
+			<a href="#" id="nav-users" data-section="users" class="nav-link flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 text-[#d3c5ac] hover:text-white transition-all">
+				<span class="material-symbols-outlined">group</span>
+				<span class="hidden lg:block font-bold text-xs uppercase tracking-widest">Usuarios</span>
+			</a>
+			<a href="#" id="nav-policy" data-section="policy" class="nav-link flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 text-[#d3c5ac] hover:text-white transition-all">
+				<span class="material-symbols-outlined">policy</span>
+				<span class="hidden lg:block font-bold text-xs uppercase tracking-widest">Cancelación</span>
 			</a>
 		</nav>
 		<div class="px-4 mt-auto">
@@ -93,6 +102,62 @@
 						<span class="text-[#f7bb07] text-xs font-bold">Se Unieron</span>
 					</div>
 				</div>
+				<div class="bg-[#131313] p-6 rounded-2xl border border-white/5">
+					<span class="text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2 block">Tasa No-Show</span>
+					<div class="flex items-baseline gap-2">
+						<span id="stat-noshow-rate" class="text-3xl font-black">—</span>
+						<span class="text-orange-400 text-xs font-bold">En Rango</span>
+					</div>
+				</div>
+				<div class="bg-[#131313] p-6 rounded-2xl border border-white/5">
+					<span class="text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2 block">Tasa Cancelación</span>
+					<div class="flex items-baseline gap-2">
+						<span id="stat-cancel-rate" class="text-3xl font-black">—</span>
+						<span class="text-red-400 text-xs font-bold">En Rango</span>
+					</div>
+				</div>
+			</div>
+
+			<!-- ANALÍTICAS HISTÓRICAS -->
+			<div class="bg-[#131313] rounded-3xl p-8 border border-white/5 mb-8">
+				<div class="flex flex-col lg:flex-row lg:items-end justify-between gap-4 mb-8">
+					<div>
+						<h3 class="font-['Space_Grotesk'] text-xl font-black uppercase tracking-tighter">Analíticas Históricas</h3>
+						<p class="text-[#d3c5ac] text-xs uppercase tracking-widest mt-1">Ingresos, uso y tasas en rango de fechas</p>
+					</div>
+					<div class="flex flex-wrap items-end gap-3">
+						<div>
+							<label class="block text-[9px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2">Desde</label>
+							<input id="analytics-from" type="date" class="bg-white/5 border border-white/10 rounded-xl py-2.5 px-3 text-xs outline-none focus:border-[#f7bb07]"/>
+						</div>
+						<div>
+							<label class="block text-[9px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2">Hasta</label>
+							<input id="analytics-to" type="date" class="bg-white/5 border border-white/10 rounded-xl py-2.5 px-3 text-xs outline-none focus:border-[#f7bb07]"/>
+						</div>
+						<button id="apply-analytics" class="px-5 py-2.5 rounded-xl bg-[#f7bb07] text-black font-black uppercase tracking-widest text-xs hover:scale-[1.02] transition-all">Aplicar</button>
+						<button class="analytics-preset px-4 py-2.5 rounded-xl border border-white/10 text-[#d3c5ac] font-black uppercase tracking-widest text-xs hover:bg-white/5 transition-all" data-days="7">7d</button>
+						<button class="analytics-preset px-4 py-2.5 rounded-xl border border-white/10 text-[#d3c5ac] font-black uppercase tracking-widest text-xs hover:bg-white/5 transition-all" data-days="30">30d</button>
+						<button class="analytics-preset px-4 py-2.5 rounded-xl border border-white/10 text-[#d3c5ac] font-black uppercase tracking-widest text-xs hover:bg-white/5 transition-all" data-days="90">90d</button>
+					</div>
+				</div>
+				<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+					<div class="bg-white/5 rounded-2xl p-5 border border-white/5">
+						<span class="block text-[9px] font-black uppercase tracking-widest text-[#d3c5ac] mb-4">Ingresos por Día</span>
+						<div class="h-56"><canvas id="chart-revenue"></canvas></div>
+					</div>
+					<div class="bg-white/5 rounded-2xl p-5 border border-white/5">
+						<span class="block text-[9px] font-black uppercase tracking-widest text-[#d3c5ac] mb-4">Horas Pico de Reservas</span>
+						<div class="h-56"><canvas id="chart-hours"></canvas></div>
+					</div>
+					<div class="bg-white/5 rounded-2xl p-5 border border-white/5">
+						<span class="block text-[9px] font-black uppercase tracking-widest text-[#d3c5ac] mb-4">Canchas Más Populares</span>
+						<div class="h-56"><canvas id="chart-courts"></canvas></div>
+					</div>
+					<div class="bg-white/5 rounded-2xl p-5 border border-white/5">
+						<span class="block text-[9px] font-black uppercase tracking-widest text-[#d3c5ac] mb-4">No-Show / Cancelación</span>
+						<div class="h-56"><canvas id="chart-rates"></canvas></div>
+					</div>
+				</div>
 			</div>
 
 			<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -107,10 +172,11 @@
 									<th class="pb-4 text-[10px] font-black uppercase tracking-widest text-[#d3c5ac]">Hora</th>
 									<th class="pb-4 text-[10px] font-black uppercase tracking-widest text-[#d3c5ac]">Estado</th>
 									<th class="pb-4 text-[10px] font-black uppercase tracking-widest text-[#d3c5ac]">Monto</th>
+								<th class="pb-4 text-[10px] font-black uppercase tracking-widest text-[#d3c5ac]">Acción</th>
 								</tr>
 							</thead>
 							<tbody id="admin-bookings-list">
-								<tr><td colspan="5" class="py-8 text-center text-[#d3c5ac] text-xs uppercase tracking-widest animate-pulse">Cargando...</td></tr>
+								<tr><td colspan="6" class="py-8 text-center text-[#d3c5ac] text-xs uppercase tracking-widest animate-pulse">Cargando...</td></tr>
 							</tbody>
 						</table>
 					</div>
@@ -235,6 +301,71 @@
 			</div>
 		</section>
 
+		<!-- ══ SECCIÓN: USUARIOS ══ -->
+		<section id="section-users" class="hidden">
+			<header class="mb-12">
+				<h1 class="font-['Space_Grotesk'] text-4xl font-black tracking-tighter uppercase">Gestión de Usuarios</h1>
+				<p class="text-[#d3c5ac] text-xs uppercase tracking-widest mt-1">Buscar, ajustar puntos, estados e historial de cuenta</p>
+			</header>
+			<div class="bg-[#131313] rounded-3xl p-8 border border-white/5">
+				<div class="flex flex-col md:flex-row gap-4 mb-6">
+					<div class="flex-1 flex items-center bg-white/5 border border-white/10 rounded-xl px-4">
+						<span class="material-symbols-outlined text-[#d3c5ac] mr-3 text-sm">search</span>
+						<input id="user-search" placeholder="Buscar por nombre o email..." class="flex-1 bg-transparent border-none focus:ring-0 text-sm outline-none py-3"/>
+					</div>
+					<select id="user-status-filter" class="bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm outline-none focus:border-[#f7bb07]">
+						<option value="">Todos los estados</option>
+						<option value="active">Activo</option>
+						<option value="suspended">Suspendido</option>
+						<option value="deactivated">Desactivado</option>
+					</select>
+				</div>
+				<div class="overflow-x-auto">
+					<table class="w-full text-left">
+						<thead>
+							<tr class="border-b border-white/5">
+								<th class="pb-4 text-[10px] font-black uppercase tracking-widest text-[#d3c5ac]">Atleta</th>
+								<th class="pb-4 text-[10px] font-black uppercase tracking-widest text-[#d3c5ac]">Email</th>
+								<th class="pb-4 text-[10px] font-black uppercase tracking-widest text-[#d3c5ac]">Rol</th>
+								<th class="pb-4 text-[10px] font-black uppercase tracking-widest text-[#d3c5ac]">Puntos</th>
+								<th class="pb-4 text-[10px] font-black uppercase tracking-widest text-[#d3c5ac]">Reservas</th>
+								<th class="pb-4 text-[10px] font-black uppercase tracking-widest text-[#d3c5ac]">Estado</th>
+								<th class="pb-4 text-[10px] font-black uppercase tracking-widest text-[#d3c5ac]">Cambiar Estado</th>
+								<th class="pb-4 text-[10px] font-black uppercase tracking-widest text-[#d3c5ac]">Acciones</th>
+							</tr>
+						</thead>
+						<tbody id="admin-users-list">
+							<tr><td colspan="8" class="py-8 text-center text-[#d3c5ac] text-xs uppercase tracking-widest animate-pulse">Cargando...</td></tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</section>
+
+		<!-- ══ SECCIÓN: POLÍTICA DE CANCELACIÓN ══ -->
+		<section id="section-policy" class="hidden">
+			<header class="mb-12">
+				<h1 class="font-['Space_Grotesk'] text-4xl font-black tracking-tighter uppercase">Política de Cancelación</h1>
+				<p class="text-[#d3c5ac] text-xs uppercase tracking-widest mt-1">Reembolsos por niveles y penalización por no-show</p>
+			</header>
+			<div class="bg-[#131313] rounded-3xl p-8 border border-white/5">
+				<div class="flex items-start gap-3 mb-6 p-4 bg-white/5 border border-white/10 rounded-xl">
+					<span class="material-symbols-outlined text-[#f7bb07] text-sm mt-0.5">info</span>
+					<p class="text-xs text-[#d3c5ac] leading-relaxed">
+						El reembolso indica el porcentaje de los puntos ganados que conserva el usuario al cancelar.
+						Con reembolso del 100% no se descuentan puntos; con 0% se revierten todos. La penalización de
+						no-show se descuenta además de la reversión cuando un administrador registra una inasistencia.
+					</p>
+				</div>
+				<div id="policy-tiers-list" class="space-y-4 mb-6">
+					<p class="text-[#d3c5ac] text-xs uppercase tracking-widest animate-pulse">Cargando...</p>
+				</div>
+				<button id="save-policy-btn" class="w-full lg:w-auto px-8 py-3 rounded-xl bg-[#f7bb07] text-black font-black uppercase tracking-widest text-xs hover:scale-[1.02] transition-all">
+					Guardar Política
+				</button>
+			</div>
+		</section>
+
 	</main>
 
 	<!-- Add Facility Modal -->
@@ -285,6 +416,73 @@
 	</div>
 
 	<div id="toast" class="toast"></div>
+
+	<!-- Adjust Points Modal -->
+	<div id="points-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+		<div class="bg-[#131313] rounded-3xl p-8 w-full max-w-md border border-white/10">
+			<div class="flex justify-between items-start mb-6">
+				<div>
+					<h3 class="font-['Space_Grotesk'] text-xl font-black uppercase tracking-tighter">Ajustar Puntos</h3>
+					<p id="points-modal-username" class="text-[#d3c5ac] text-xs uppercase tracking-widest mt-1">—</p>
+				</div>
+				<button id="close-points-modal" class="text-[#d3c5ac] hover:text-white transition-colors">
+					<span class="material-symbols-outlined">close</span>
+				</button>
+			</div>
+			<div class="bg-white/5 border border-white/10 rounded-xl px-4 py-3 mb-6 flex items-center justify-between">
+				<span class="text-[10px] font-black uppercase tracking-widest text-[#d3c5ac]">Saldo actual</span>
+				<span id="points-modal-current" class="text-sm font-black text-[#f7bb07]">—</span>
+			</div>
+			<div class="space-y-4">
+				<div>
+					<label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2">Puntos a sumar/restar</label>
+					<input id="points-amount" type="number" placeholder="Ej: 500 o -250" class="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm outline-none focus:border-[#f7bb07]"/>
+				</div>
+				<div>
+					<label class="block text-[10px] font-black uppercase tracking-widest text-[#d3c5ac] mb-2">Motivo</label>
+					<input id="points-reason" type="text" placeholder="Ej: Ajuste por evento, compensación..." class="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm outline-none focus:border-[#f7bb07]"/>
+				</div>
+			</div>
+			<div class="flex gap-4 mt-8">
+				<button id="close-points-modal-2" class="flex-1 py-3 rounded-xl border border-white/10 font-black uppercase tracking-widest text-xs hover:bg-white/5 transition-all">Cancelar</button>
+				<button id="confirm-points-btn" class="flex-1 py-3 rounded-xl bg-[#f7bb07] text-black font-black uppercase tracking-widest text-xs hover:scale-[1.02] transition-all">Aplicar</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- User History Modal -->
+	<div id="history-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+		<div class="bg-[#131313] rounded-3xl p-8 w-full max-w-2xl border border-white/10 max-h-[85vh] overflow-y-auto">
+			<div class="flex justify-between items-start mb-6">
+				<div>
+					<h3 id="history-modal-name" class="font-['Space_Grotesk'] text-xl font-black uppercase tracking-tighter">—</h3>
+					<p class="text-[#d3c5ac] text-xs uppercase tracking-widest mt-1">
+						<span id="history-modal-email" class="mr-3">—</span>
+						<span id="history-modal-status" class="mr-3">—</span>
+						<span id="history-modal-points" class="text-[#f7bb07]">—</span>
+					</p>
+				</div>
+				<button id="close-history-modal" class="text-[#d3c5ac] hover:text-white transition-colors">
+					<span class="material-symbols-outlined">close</span>
+				</button>
+			</div>
+			<div class="space-y-6">
+				<div>
+					<h4 class="text-[10px] font-black uppercase tracking-widest text-[#f7bb07] mb-3">Historial de Reservas</h4>
+					<div id="history-reservations" class="space-y-2"></div>
+				</div>
+				<div>
+					<h4 class="text-[10px] font-black uppercase tracking-widest text-[#f7bb07] mb-3">Ajustes de Puntos</h4>
+					<div id="history-adjustments" class="space-y-2"></div>
+				</div>
+				<div>
+					<h4 class="text-[10px] font-black uppercase tracking-widest text-[#f7bb07] mb-3">Reseñas</h4>
+					<div id="history-reviews" class="space-y-2"></div>
+				</div>
+			</div>
+		</div>
+	</div>
+
 	<script src="/static/scripts/admin.js"></script>
 </body>
 </html>
