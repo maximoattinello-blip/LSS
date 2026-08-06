@@ -12,7 +12,7 @@ from functools import wraps
 from werkzeug.security import check_password_hash, generate_password_hash
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
-app.secret_key = 'resermax_dev_secret_key_replace_in_production'
+app.secret_key = os.environ.get('SECRET_KEY', 'resermax_dev_secret_key_replace_in_production')
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 db_path = os.path.join(basedir, 'resermax.db')
@@ -1648,4 +1648,7 @@ def api_admin_user_history(user_id):
 	})
 
 if __name__ == '__main__':
-	app.run(host='127.0.0.1', port=5000, debug=True)
+	port = int(os.environ.get('PORT', 5000))
+	host = '0.0.0.0' if os.environ.get('PORT') else '127.0.0.1'
+	debug = os.environ.get('FLASK_ENV') == 'development'
+	app.run(host=host, port=port, debug=debug)
